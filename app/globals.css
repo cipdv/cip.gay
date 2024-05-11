@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background-color: #b1b695;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+h1 {
+  font-size: 1.5;
+  font-weight: bold;
+}
+
+h2 {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+h3 {
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.btn {
+  padding: 1rem;
+  background-color: #afd2e9;
+}
+
+.btn:hover {
+  background-color: #99b7d4;
+}
