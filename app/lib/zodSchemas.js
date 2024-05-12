@@ -18,3 +18,29 @@ export const journalSchema = z.object({
     .optional()
     .default([]),
 });
+
+export const ideaSchema = z.object({
+  idea: z.string().min(1, "Idea is empty"),
+  notes: z.string().optional(),
+  images: z
+    .array(
+      z.string().refine(isImageFile, {
+        message: "Must be an image file",
+      })
+    )
+    .optional()
+    .default([]),
+});
+
+export const todoSchema = z.object({
+  todo: z.string().min(1, "Todo is empty"),
+  notes: z.string().optional(),
+  images: z
+    .array(
+      z.string().refine(isImageFile, {
+        message: "Must be an image file",
+      })
+    )
+    .optional()
+    .default([]),
+});
