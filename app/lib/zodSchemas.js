@@ -35,6 +35,7 @@ export const ideaSchema = z.object({
 export const todoSchema = z.object({
   todo: z.string().min(1, "Todo is empty"),
   notes: z.string().optional(),
+  deadline: z.string().optional(),
   images: z
     .array(
       z.string().refine(isImageFile, {

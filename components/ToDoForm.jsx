@@ -29,6 +29,12 @@ const ToDoForm = () => {
         <textarea name="todo" className="p-1 bg-textarea h-18" />
         <label>Notes</label>
         <textarea name="notes" className="p-1 bg-textarea h-24" />
+        <label>Deadline</label>
+        <input
+          type="date"
+          name="deadline"
+          className="p-1 bg-textarea w-32"
+        />{" "}
         <div className="flex items-center">
           <SubmitButton />
           <h2 className="text-error ml-4">{state?.message}</h2>

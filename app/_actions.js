@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import dbConnection from "./lib/database";
 import { journalSchema, ideaSchema, todoSchema } from "./lib/zodSchemas";
+import { ObjectId } from "mongodb";
 
 export async function submitJournalEntry(prevState, formData) {
   //check session for user
@@ -98,6 +99,10 @@ export const getAllIdeas = async () => {
   return ideas;
 };
 
+//////////////////////////////////////////////////////////////
+//////////////TODO////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+
 export const submitNewTodo = async (prevState, formData) => {
   //check session for user
 
@@ -105,6 +110,7 @@ export const submitNewTodo = async (prevState, formData) => {
   const zodResult = todoSchema.safeParse({
     todo: formData.get("todo"),
     notes: formData.get("notes"),
+    deadline: formData.get("deadline"),
     images: [],
   });
 
@@ -124,6 +130,7 @@ export const submitNewTodo = async (prevState, formData) => {
       todo: zodResult.data.todo,
       notes: zodResult.data.notes,
       images: zodResult.data.images,
+      deadline: zodResult.data.deadline,
       createdAt: new Date(),
     });
   } catch (e) {
@@ -140,4 +147,13 @@ export const getAllTodos = async () => {
 
   const todos = await db.collection("todos").find().toArray();
   return todos;
+};
+
+export const deleteTodo = async (id) => {
+  const dbClient = await dbConnection;
+  const db = await dbClient.db(process.env.DB_NAME);
+
+  await db.collection("todos").deleteOne({ _id: new ObjectId(id) });
+  revalidatePath("/todos");
+  return { message: "To-do deleted" };
 };

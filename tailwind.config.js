@@ -18,6 +18,7 @@ module.exports = {
         textarea: "#FFE4E1",
         journalEntry: "#A690A4",
         navbar: "#8C9364",
+        deleteButton: "#9DCBBA",
       },
     },
   },
