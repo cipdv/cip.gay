@@ -41,6 +41,8 @@ export default function Home() {
           ideas for question jar.
         </p>
         <p>Quotes & notes on main page</p>
+        <p>Show upcoming deadlines in the next 7 days</p>
+        <p>Section for boys, events & ideas?</p>
       </div>
     </div>
   );

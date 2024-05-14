@@ -7,10 +7,10 @@ const journalPage = async () => {
   const journalEntries = await getAllJournalEntries();
 
   return (
-    <div className="space-y-10 ml-24 mr-24 mt-6 mb-12">
+    <section>
       <JournalForm />
       <JournalEntries journalEntries={journalEntries} />
-    </div>
+    </section>
   );
 };
 
