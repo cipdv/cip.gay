@@ -134,7 +134,8 @@ export async function login(prevState, formData) {
   const session = await encrypt({ resultObj, expires });
 
   // Save the session in a cookie
-  cookies().set("session", session, { expires, httpOnly: true });
+  //   cookies().set("session", session, { expires, httpOnly: true });
+  cookies().set("session", session, { expires, httpOnly: true, secure: true });
 
   revalidatePath("/");
   redirect("/");
@@ -164,6 +165,7 @@ export async function updateSession(request) {
     value: await encrypt(parsed),
     httpOnly: true,
     expires: parsed.expires,
+    secure: true,
   });
   return res;
 }
