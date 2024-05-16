@@ -1,5 +1,5 @@
 import IdeasForm from "@/components/IdeasForm";
-import { getAllIdeas } from "../_actions";
+import { getAllIdeas } from "../../_actions";
 import IdeasBubbles from "@/components/IdeasBubbles";
 
 const ideasPage = async () => {

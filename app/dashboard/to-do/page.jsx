@@ -1,6 +1,6 @@
 import ToDoForm from "@/components/ToDoForm";
 import ToDoList from "@/components/ToDoList";
-import { getAllTodos } from "../_actions";
+import { getAllTodos } from "../../_actions";
 
 const todoPage = async () => {
   const todos = await getAllTodos();

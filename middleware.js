@@ -6,22 +6,13 @@ export async function middleware(request) {
 
   const currentUser = request.cookies.get("session")?.value;
 
-  //   let currentUserObj = null;
-  //   if (currentUser) {
-  //     currentUserObj = await decrypt(currentUser);
-  //   }
-
-  //   const memberType = currentUserObj?.resultObj?.memberType;
-
-  if (
-    !currentUser &&
-    !["/", "/sign-in"].some((path) =>
-      typeof path === "string"
-        ? path === request.nextUrl.pathname
-        : path.test(request.nextUrl.pathname)
-    )
-  ) {
+  if (!currentUser && !["/", "/sign-in"].includes(request.nextUrl.pathname)) {
     return NextResponse.redirect(new URL("/sign-in", request.url));
+  } else if (
+    currentUser &&
+    !request.nextUrl.pathname.startsWith("/dashboard")
+  ) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   return await updateSession(request);

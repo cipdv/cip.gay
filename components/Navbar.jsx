@@ -10,7 +10,7 @@ const Navbar = async () => {
     <div className="pl-10 pt-6 pb-6 pr-10 bg-navbar flex justify-between">
       <Link href="/">
         <div className="flex items-center">
-          <h1>Just for Cippy</h1>
+          <h1>Just for {currentUser?.resultObj?.firstName || "_______"}</h1>
         </div>
       </Link>
       {currentUser ? (
