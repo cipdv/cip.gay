@@ -15,7 +15,6 @@ const DashboardLinks = () => {
           birthdays, etc. Ask for help on things. Hear their requests. Input
           ideas for question jar.
         </p>
-        <p>Quotes & notes on main page</p>
         <p>Section for boys, events & ideas?</p>
       </div>
     </div>

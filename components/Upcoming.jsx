@@ -2,9 +2,7 @@ import React from "react";
 import { getAllTodos } from "@/app/_actions";
 import { deleteTodo } from "@/app/_actions";
 
-const Upcoming = async () => {
-  const todos = await getAllTodos();
-
+const Upcoming = async ({ todos }) => {
   const upcomingTodos = todos.filter((todo) => {
     const deadlineDate = new Date(todo.deadline);
     const today = new Date();

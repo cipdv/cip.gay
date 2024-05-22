@@ -1,9 +1,6 @@
 import React from "react";
-import { getAllJournalEntries } from "@/app/_actions";
 
-const Notes = async () => {
-  const journalEntries = await getAllJournalEntries();
-
+const Notes = async ({ journalEntries }) => {
   let randomEntry = null;
 
   while (journalEntries.length > 0) {
@@ -19,15 +16,7 @@ const Notes = async () => {
     }
   }
 
-  return (
-    <div>
-      {randomEntry && (
-        <div key={randomEntry._id}>
-          <h2>{randomEntry.notes}</h2>
-        </div>
-      )}
-    </div>
-  );
+  return <div>{randomEntry && <h2>{randomEntry.notes}</h2>}</div>;
 };
 
 export default Notes;
