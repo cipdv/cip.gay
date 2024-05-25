@@ -7,6 +7,8 @@ import {
   ideaSchema,
   todoSchema,
   loginSchema,
+  WRDSchema,
+  MemoriesSchema,
 } from "./lib/zodSchemas";
 import { ObjectId } from "mongodb";
 import { SignJWT, jwtVerify } from "jose";
@@ -349,4 +351,160 @@ export const deleteTodo = async (id) => {
   await db.collection("todos").deleteOne({ _id: new ObjectId(id) });
   revalidatePath("/todos");
   return { message: "To-do deleted" };
+};
+
+////////////////////////////////////////////////////////////////
+////////////////////MEALS///////////////////////////////////////
+////////////////////////////////////////////////////////////////
+
+export async function submitNewMealIdea(prevState, formData) {
+  //check session for user
+
+  const idea = formData.get("idea");
+  const notes = formData.get("notes");
+
+  //validate form data
+  const zodResult = ideaSchema.safeParse({
+    idea: idea,
+    notes: notes,
+    images: [],
+  });
+
+  const ideaError = zodResult?.error?.errors?.find(
+    (error) => error?.path[0] === "idea"
+  );
+  if (ideaError) {
+    return { message: ideaError.message };
+  }
+
+  //save to database
+  try {
+    const dbClient = await dbConnection;
+    const db = await dbClient.db(process.env.DB_NAME);
+
+    await db.collection("meals").insertOne({
+      idea: zodResult.data.idea,
+      notes: zodResult.data.notes,
+      images: zodResult.data.images,
+      createdAt: new Date(),
+    });
+  } catch (e) {
+    return { message: "Error submitting idea" };
+  }
+
+  revalidatePath("/meals");
+  return { message: "Meal idea submitted" };
+}
+
+export const getAllMealIdeas = async () => {
+  const dbClient = await dbConnection;
+  const db = await dbClient.db(process.env.DB_NAME);
+
+  const ideas = await db.collection("meals").find().toArray();
+  return ideas;
+};
+
+////////////////////////////////////////////////////////////////
+////////////////////WRDs////////////////////////////////////////
+////////////////////////////////////////////////////////////////
+
+export async function submitNewWRD(prevState, formData) {
+  //check session for user
+
+  const type = formData.get("type");
+  const notes = formData.get("notes");
+
+  //validate form data
+  const zodResult = WRDSchema.safeParse({
+    type: type,
+    notes: notes,
+    images: [],
+  });
+
+  const ideaError = zodResult?.error?.errors?.find(
+    (error) => error?.path[0] === "idea"
+  );
+  if (ideaError) {
+    return { message: ideaError.message };
+  }
+
+  //save to database
+  try {
+    const dbClient = await dbConnection;
+    const db = await dbClient.db(process.env.DB_NAME);
+
+    await db.collection("WRDs").insertOne({
+      type: zodResult.data.type,
+      notes: zodResult.data.notes,
+      images: zodResult.data.images,
+      createdAt: new Date(),
+    });
+  } catch (e) {
+    return { message: "Error submitting idea" };
+  }
+
+  revalidatePath("/watch-read-do");
+  return { message: "New WRD submitted" };
+}
+
+export const getAllWRDs = async () => {
+  const dbClient = await dbConnection;
+  const db = await dbClient.db(process.env.DB_NAME);
+
+  const ideas = await db.collection("WRDs").find().toArray();
+  return ideas;
+};
+
+////////////////////////////////////////////////////////////////
+////////////////////MEMORIES////////////////////////////////////
+////////////////////////////////////////////////////////////////
+
+export async function submitNewMemory(prevState, formData) {
+  //check session for user
+
+  const month = formData.get("month");
+  const year = formData.get("year");
+  const notes = formData.get("notes");
+
+  //validate form data
+  const zodResult = MemoriesSchema.safeParse({
+    month: month,
+    year: year,
+    notes: notes,
+    images: [],
+  });
+
+  const ideaError = zodResult?.error?.errors?.find(
+    (error) => error?.path[0] === "idea"
+  );
+  if (ideaError) {
+    return { message: ideaError.message };
+  }
+
+  //save to database
+  try {
+    const dbClient = await dbConnection;
+    const db = await dbClient.db(process.env.DB_NAME);
+
+    await db.collection("memories").insertOne({
+      month: zodResult.data.month,
+      year: zodResult.data.year,
+      notes: zodResult.data.notes,
+      images: zodResult.data.images,
+      createdAt: new Date(),
+    });
+  } catch (e) {
+    return { message: "Error submitting memory" };
+  }
+
+  revalidatePath("/memories");
+  return { message: "New memory submitted" };
+}
+
+export const getAllMemories = async () => {
+  const dbClient = await dbConnection;
+  const db = await dbClient.db(process.env.DB_NAME);
+
+  const memories = await db.collection("memories").find().toArray();
+  return memories;
 };

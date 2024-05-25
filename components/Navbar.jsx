@@ -27,8 +27,17 @@ const Navbar = async () => {
           <Link href="/dashboard/projects">
             <h3>Projects</h3>
           </Link>
+          <Link href="/dashboard/meals">
+            <h3>Meals</h3>
+          </Link>
+          <Link href="/dashboard/watch-read-do">
+            <h3>Watch/Read/Do</h3>
+          </Link>
           <Link href="/dashboard/finances">
             <h3>Finances</h3>
+          </Link>
+          <Link href="/dashboard/memories">
+            <h3>Memories</h3>
           </Link>
           <form
             action={async () => {

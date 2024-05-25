@@ -50,3 +50,30 @@ export const loginSchema = z.object({
   email: z.string().email("Invalid email"),
   password: z.string().min(6, "Password is too short"),
 });
+
+export const WRDSchema = z.object({
+  type: z.string().min(1, "Type is empty"),
+  notes: z.string().optional(),
+  images: z
+    .array(
+      z.string().refine(isImageFile, {
+        message: "Must be an image file",
+      })
+    )
+    .optional()
+    .default([]),
+});
+
+export const MemoriesSchema = z.object({
+  month: z.string().min(1, "Month is empty"),
+  year: z.string().min(4, "Year is empty"),
+  notes: z.string().optional(),
+  images: z
+    .array(
+      z.string().refine(isImageFile, {
+        message: "Must be an image file",
+      })
+    )
+    .optional()
+    .default([]),
+});

@@ -6,8 +6,9 @@ const Goals = () => {
       <h2>Current Goals:</h2>
       <p>
         Set-up Workplace Wellness Days in Office Buildings (Toronto, Guelph,
-        Hamilton, etc)
+        Hamilton, etc). Target = 4/week for 3 weeks/month = 12/month.
       </p>
+
       <p>Sandsharks professional profiles</p>
       <p>Develop and market new massage website</p>
       <p>Instagram ads, mailbox ads</p>

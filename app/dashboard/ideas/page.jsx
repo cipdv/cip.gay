@@ -7,7 +7,6 @@ const ideasPage = async () => {
 
   return (
     <div className="space-y-10 ml-24 mr-24 mt-6 mb-12">
-      <h1>Ideas</h1>
       <IdeasForm />
       <IdeasBubbles ideas={ideas} />
     </div>
