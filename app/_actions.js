@@ -508,3 +508,62 @@ export const getAllMemories = async () => {
   const memories = await db.collection("memories").find().toArray();
   return memories;
 };
+
+////////////////////////////////////////////////////////////////
+////////////////////PURCHASES///////////////////////////////////
+////////////////////////////////////////////////////////////////
+
+export async function submitNewItem(prevState, formData) {
+  //check session for user
+
+  const item = formData.get("item");
+  const notes = formData.get("notes");
+
+  //validate form data
+  // const zodResult = MemoriesSchema.safeParse({
+  //   item: item,
+  //   notes: notes,
+  //   images: [],
+  // });
+
+  // const ideaError = zodResult?.error?.errors?.find(
+  //   (error) => error?.path[0] === "idea"
+  // );
+  // if (ideaError) {
+  //   return { message: ideaError.message };
+  // }
+
+  //save to database
+  try {
+    const dbClient = await dbConnection;
+    const db = await dbClient.db(process.env.DB_NAME);
+
+    await db.collection("purchases").insertOne({
+      item: item,
+      notes: notes,
+      createdAt: new Date(),
+    });
+  } catch (e) {
+    return { message: "Error submitting purchase" };
+  }
+
+  revalidatePath("/purchases");
+  return { message: "New item submitted" };
+}
+
+export const getAllPurchases = async () => {
+  const dbClient = await dbConnection;
+  const db = await dbClient.db(process.env.DB_NAME);
+
+  const purchases = await db.collection("purchases").find().toArray();
+  return purchases;
+};
+
+export const deleteItem = async (id) => {
+  const dbClient = await dbConnection;
+  const db = await dbClient.db(process.env.DB_NAME);
+
+  await db.collection("purchases").deleteOne({ _id: new ObjectId(id) });
+  revalidatePath("/purchases");
+  return { message: "Item deleted" };
+};
