@@ -192,6 +192,44 @@ export const verifyAuth = async (token) => {
   }
 };
 
+export async function resetPassword(prevState, formData) {
+  const email = formData.get("email")?.toLowerCase().trim();
+  const newPassword = formData.get("newPassword");
+
+  if (!email || !newPassword) {
+    return { message: "Email and new password are required", success: false };
+  }
+
+  try {
+    const dbClient = await dbConnection;
+    const db = await dbClient.db(process.env.DB_NAME);
+
+    const existingUser = await db.collection("members").findOne({ email });
+    if (!existingUser) {
+      return { message: "No user found for that email", success: false };
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    await db
+      .collection("members")
+      .updateOne(
+        { _id: existingUser._id },
+        { $set: { password: hashedPassword } }
+      );
+
+    revalidatePath("/");
+    return {
+      message: "Password reset. You can now sign in with the new password.",
+      success: true,
+    };
+  } catch (error) {
+    console.error(error);
+    return { message: "Failed to reset password. Try again.", success: false };
+  }
+}
+
 ////////////////////////////////////////////////////////////////
 ////////////////////JOURNAL/////////////////////////////////////
 ////////////////////////////////////////////////////////////////

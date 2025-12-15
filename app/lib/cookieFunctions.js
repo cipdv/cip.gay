@@ -4,19 +4,35 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const secretKey = process.env.SECRET_KEY;
-const key = new TextEncoder().encode(secretKey);
+// const secretKey = process.env.SECRET_KEY;
+// const key = new TextEncoder().encode(secretKey);
+
+const getSecretKey = () => {
+  const secretKey = process.env["SECRET_KEY"];
+
+  if (!secretKey) {
+    throw new Error(
+      "SECRET_KEY is not defined. Set it in your environment variables."
+    );
+  }
+
+  return secretKey;
+};
+
+const getEncodedKey = () => new TextEncoder().encode(getSecretKey());
 
 export async function encrypt(payload) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("10 min from now")
-    .sign(key);
+    // .sign(key);
+    .sign(getEncodedKey());
 }
 
 export async function decrypt(input) {
-  const { payload } = await jwtVerify(input, key, {
+  // const { payload } = await jwtVerify(input, key, {
+  const { payload } = await jwtVerify(input, getEncodedKey(), {
     algorithms: ["HS256"],
   });
   return payload;
