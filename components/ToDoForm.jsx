@@ -2,6 +2,7 @@
 
 import { submitNewTodo } from "@/app/_actions";
 import { useFormState, useFormStatus } from "react-dom";
+import { useEffect, useRef } from "react";
 
 const initialState = {
   message: "",
@@ -20,10 +21,19 @@ function SubmitButton() {
 const ToDoForm = () => {
   const [state, formAction] = useFormState(submitNewTodo, initialState);
 
+  const formRef = useRef(null);
+
+  useEffect(() => {
+    if (state?.message === "To-do submitted" && formRef.current) {
+      formRef.current.reset();
+    }
+  }, [state]);
+
   //how do I clear this form after submission?
 
   return (
-    <form action={formAction}>
+    <form ref={formRef} action={formAction}>
+      {" "}
       <div className="flex flex-col space-y-4 glassmorphism">
         <label>To-Do</label>
         <textarea name="todo" className="p-1 bg-textarea h-18" />
