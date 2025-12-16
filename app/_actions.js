@@ -388,25 +388,27 @@ export async function createTask(formData) {
 
   const title = normalizeText(formData.get("title"));
   const details = normalizeText(formData.get("details"));
-  const projectId = formData.get("projectId") || null;
+  const projectId = normalizeText(formData.get("projectId")); // may be null/''
 
-  // Your UI sends YYYY-MM-DD from <input type="date" />
-  const scheduledFor = normalizeText(formData.get("scheduledFor"));
+  // UI sends YYYY-MM-DD from <input type="date" />
+  const dueDate = normalizeText(formData.get("dueDate"));
+
+  if (!title) return { message: "Task title is required" };
 
   const { rows } = await sql`
-  INSERT INTO tasks (user_id, project_id, title, details, scheduled_for, status, created_at, updated_at)
-  VALUES (
-    ${userId}::uuid,
-    ${projectId}::uuid,
-    ${title},
-    ${details},
-    NULLIF(${scheduledFor}, '')::date::timestamptz,
-    'active',
-    NOW(),
-    NOW()
-  )
-  RETURNING id;
-`;
+    INSERT INTO tasks (user_id, project_id, title, details, due_date, status, created_at, updated_at)
+    VALUES (
+      ${userId}::uuid,
+      NULLIF(${projectId}, '')::uuid,
+      ${title},
+      ${details},
+      NULLIF(${dueDate}, '')::date,
+      'active',
+      NOW(),
+      NOW()
+    )
+    RETURNING id;
+  `;
 
   revalidatePath("/dashboard");
   revalidatePath("/tasks");
@@ -421,30 +423,38 @@ export async function updateTask(formData) {
 
   const title = normalizeText(formData.get("title"));
   const details = normalizeText(formData.get("details"));
-  const projectId = formData.get("projectId");
-  const scheduledFor = normalizeText(formData.get("scheduledFor"));
-  const status = formData.get("status"); // 'active' | 'completed' | 'archived'
+
+  const projectId = normalizeText(formData.get("projectId")); // uuid or null/''
+
+  const dueDate = normalizeText(formData.get("dueDate")); // YYYY-MM-DD or null/''
+
+  // IMPORTANT: tasks.status is enum completion_status
+  const status = normalizeText(formData.get("status")); // 'active' | 'completed' | 'archived' etc.
 
   const completedAt = status === "completed" ? nowISO() : null;
 
   await sql`
     UPDATE tasks
     SET
-      title = COALESCE(${title}, title),
-      details = COALESCE(${details}, details),
-      project_id = COALESCE(${projectId}::uuid, project_id),
-      scheduled_for = CASE
-        WHEN ${scheduledFor} IS NULL OR ${scheduledFor} = '' THEN scheduled_for
-        ELSE ${scheduledFor}::date::timestamptz
-      END,
-      status = COALESCE(${status}, status),
+      title = COALESCE(NULLIF(${title}, ''), title),
+      details = COALESCE(NULLIF(${details}, ''), details),
+
+      project_id = COALESCE(NULLIF(${projectId}, '')::uuid, project_id),
+      due_date = COALESCE(NULLIF(${dueDate}, '')::date, due_date),
+
+      status = COALESCE(NULLIF(${status}, '')::completion_status, status),
+
       completed_at = CASE
-        WHEN ${status} = 'completed' THEN COALESCE(completed_at, ${completedAt}::timestamptz)
-        WHEN ${status} IS NULL THEN completed_at
+        WHEN NULLIF(${status}, '')::completion_status = 'completed'
+          THEN COALESCE(completed_at, ${completedAt}::timestamptz)
+        WHEN NULLIF(${status}, '') IS NULL
+          THEN completed_at
         ELSE NULL
       END,
+
       updated_at = NOW()
-    WHERE id = ${taskId} AND user_id = ${userId};
+    WHERE id = ${taskId}::uuid
+      AND user_id = ${userId}::uuid;
   `;
 
   revalidatePath("/dashboard");
@@ -456,9 +466,14 @@ export async function deleteTask(taskId) {
   const userId = await requireUserId();
   if (!taskId) return { message: "Missing taskId" };
 
-  await sql`DELETE FROM tasks WHERE id = ${taskId} AND user_id = ${userId};`;
+  await sql`
+    DELETE FROM tasks
+    WHERE id = ${taskId}::uuid
+      AND user_id = ${userId}::uuid;
+  `;
 
   revalidatePath("/dashboard");
+  revalidatePath("/tasks");
   return { message: "Task deleted" };
 }
 
@@ -469,19 +484,37 @@ export async function getTasks({
 } = {}) {
   const userId = await requireUserId();
 
-  // Flexible filtering:
-  // - projectId: filter tasks belonging to a project
-  // - from/to: scheduled_for range (calendar view)
+  // Normalize empties to null (important)
+  const pid = projectId ? String(projectId) : null;
+  const fromDate = from ? String(from) : null; // "YYYY-MM-DD"
+  const toDate = to ? String(to) : null; // "YYYY-MM-DD"
+
   const { rows } = await sql`
     SELECT *
     FROM tasks
-    WHERE user_id = ${userId}
-      AND (${projectId}::uuid IS NULL OR project_id = ${projectId}::uuid)
-      AND (${from}::timestamptz IS NULL OR scheduled_for >= ${from}::timestamptz)
-      AND (${to}::timestamptz IS NULL OR scheduled_for < ${to}::timestamptz)
+    WHERE user_id = ${userId}::uuid
+
+      -- Optional project filter
+      AND (
+        NULLIF(${pid}, '')::uuid IS NULL
+        OR project_id = NULLIF(${pid}, '')::uuid
+      )
+
+      -- Optional date range filter for due_date (DATE)
+      AND (
+        NULLIF(${fromDate}, '')::date IS NULL
+        OR due_date IS NULL
+        OR due_date >= NULLIF(${fromDate}, '')::date
+      )
+      AND (
+        NULLIF(${toDate}, '')::date IS NULL
+        OR due_date IS NULL
+        OR due_date < NULLIF(${toDate}, '')::date
+      )
+
     ORDER BY
       status ASC,
-      scheduled_for NULLS LAST,
+      due_date NULLS LAST,
       created_at DESC;
   `;
 

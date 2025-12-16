@@ -2,10 +2,10 @@ import DashboardTabs from "@/components/DashboardTabs";
 import { getTasks } from "@/app/_actions";
 
 const DashboardPage = async () => {
-  const now = new Date().toISOString();
+  const today = new Date().toISOString().slice(0, 10);
+  const tasks = await getTasks({ from: today });
 
-  // Pull tasks scheduled from today onwards (plus unscheduled ones)
-  const tasks = await getTasks({ from: now });
+  console.log(tasks);
 
   return (
     <section className="px-10 py-8">

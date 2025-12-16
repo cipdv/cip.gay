@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import {
   createTask,
   updateTask,
@@ -33,6 +34,7 @@ function formatDateOnly(value) {
 }
 
 export default function DashboardTabs({ initialTasks }) {
+  const router = useRouter();
   const [tab, setTab] = useState("tasks"); // tasks | journal | dreams
   const [editingId, setEditingId] = useState(null);
 
@@ -43,12 +45,8 @@ export default function DashboardTabs({ initialTasks }) {
     return arr
       .filter((t) => t.status !== "completed")
       .sort((a, b) => {
-        const ad = a.scheduled_for
-          ? new Date(a.scheduled_for).getTime()
-          : Infinity;
-        const bd = b.scheduled_for
-          ? new Date(b.scheduled_for).getTime()
-          : Infinity;
+        const ad = a.due_date ? new Date(a.due_date).getTime() : Infinity;
+        const bd = b.due_date ? new Date(b.due_date).getTime() : Infinity;
         if (ad !== bd) return ad - bd;
 
         const ac = a.created_at ? new Date(a.created_at).getTime() : 0;
@@ -93,7 +91,13 @@ export default function DashboardTabs({ initialTasks }) {
         {tab === "tasks" && (
           <div>
             {/* Create task */}
-            <form action={createTask} className="border border-black p-4 mb-6">
+            <form
+              action={async (formData) => {
+                await createTask(formData);
+                router.refresh();
+              }}
+              className="border border-black p-4 mb-6"
+            >
               <h2 className="font-bold mb-3">New task</h2>
 
               <div className="grid gap-3">
@@ -105,7 +109,7 @@ export default function DashboardTabs({ initialTasks }) {
                 />
 
                 <input
-                  name="scheduledFor"
+                  name="dueDate"
                   type="date"
                   defaultValue={today}
                   className="border border-black p-2"
@@ -132,7 +136,7 @@ export default function DashboardTabs({ initialTasks }) {
                 <ul className="flex flex-col gap-3">
                   {tasks.map((t) => {
                     const isEditing = editingId === t.id;
-                    const scheduledDate = formatDateOnly(t.scheduled_for);
+                    const dueDateStr = formatDateOnly(t.due_date);
 
                     return (
                       <li key={t.id} className="border border-black p-3">
@@ -140,10 +144,8 @@ export default function DashboardTabs({ initialTasks }) {
                           <div className="flex justify-between gap-4">
                             <div>
                               <div className="font-bold">{t.title}</div>
-                              {scheduledDate && (
-                                <div className="text-sm">
-                                  Scheduled: {scheduledDate}
-                                </div>
+                              {dueDateStr && (
+                                <div className="text-sm">Due: {dueDateStr}</div>
                               )}
                               {t.details && (
                                 <div className="text-sm mt-2">{t.details}</div>
@@ -151,8 +153,13 @@ export default function DashboardTabs({ initialTasks }) {
                             </div>
 
                             <div className="flex gap-2 items-start">
-                              {/* Complete (no inline server action; uses exported updateTask) */}
-                              <form action={updateTask}>
+                              {/* Complete */}
+                              <form
+                                action={async (formData) => {
+                                  await updateTask(formData);
+                                  router.refresh();
+                                }}
+                              >
                                 <input
                                   type="hidden"
                                   name="taskId"
@@ -174,8 +181,13 @@ export default function DashboardTabs({ initialTasks }) {
                                 Edit
                               </button>
 
-                              {/* Delete (deleteTask takes taskId param, so bind it) */}
-                              <form action={deleteTask.bind(null, t.id)}>
+                              {/* Delete */}
+                              <form
+                                action={async () => {
+                                  await deleteTask(t.id);
+                                  router.refresh();
+                                }}
+                              >
                                 <button
                                   type="submit"
                                   className="btn border border-black"
@@ -186,7 +198,14 @@ export default function DashboardTabs({ initialTasks }) {
                             </div>
                           </div>
                         ) : (
-                          <form action={updateTask} className="grid gap-3">
+                          <form
+                            action={async (formData) => {
+                              await updateTask(formData);
+                              setEditingId(null);
+                              router.refresh();
+                            }}
+                            className="grid gap-3"
+                          >
                             <input type="hidden" name="taskId" value={t.id} />
 
                             <input
@@ -196,9 +215,9 @@ export default function DashboardTabs({ initialTasks }) {
                             />
 
                             <input
-                              name="scheduledFor"
+                              name="dueDate"
                               type="date"
-                              defaultValue={scheduledDate || ""}
+                              defaultValue={dueDateStr || ""}
                               className="border border-black p-2"
                             />
 
@@ -232,9 +251,15 @@ export default function DashboardTabs({ initialTasks }) {
 
         {tab === "journal" && (
           <div className="border border-black p-4">
-            <h2 className="font-bold mb-3">Today’s journal</h2>
+            <h2 className="font-bold mb-3">Today's journal</h2>
 
-            <form action={upsertJournalEntry} className="grid gap-3">
+            <form
+              action={async (formData) => {
+                await upsertJournalEntry(formData);
+                router.refresh();
+              }}
+              className="grid gap-3"
+            >
               <input
                 type="date"
                 name="entryDate"
@@ -283,9 +308,15 @@ export default function DashboardTabs({ initialTasks }) {
 
         {tab === "dreams" && (
           <div className="border border-black p-4">
-            <h2 className="font-bold mb-3">Tell me last night’s dream…</h2>
+            <h2 className="font-bold mb-3">Tell me last night's dream</h2>
 
-            <form action={createDream} className="grid gap-3">
+            <form
+              action={async (formData) => {
+                await createDream(formData);
+                router.refresh();
+              }}
+              className="grid gap-3"
+            >
               <input
                 type="date"
                 name="dreamDate"
