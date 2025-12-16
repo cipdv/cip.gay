@@ -1,9 +1,8 @@
 "use client";
 
 import { login, registerNewMember } from "@/app/_actions";
-import { useFormState, useFormStatus } from "react-dom";
-import Link from "next/link";
-import { useState } from "react";
+import { useFormStatus } from "react-dom";
+import { useActionState, useState } from "react";
 
 const initialState = {
   message: "",
@@ -22,8 +21,8 @@ function SubmitButton({ label }) {
 const SignInForm = () => {
   const [mode, setMode] = useState("login"); // "login" | "register"
 
-  const [loginState, loginAction] = useFormState(login, initialState);
-  const [registerState, registerAction] = useFormState(
+  const [loginState, loginAction] = useActionState(login, initialState);
+  const [registerState, registerAction] = useActionState(
     registerNewMember,
     initialState
   );

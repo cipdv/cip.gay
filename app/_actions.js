@@ -38,7 +38,8 @@ export async function decrypt(input) {
 }
 
 export async function getSession() {
-  const session = cookies().get("session")?.value;
+  const cookieStore = await cookies();
+  const session = cookieStore.get("session")?.value;
   if (!session) return null;
   return await decrypt(session);
 }
@@ -97,7 +98,8 @@ export async function registerNewMember(prevState, formData) {
     const expires = new Date(Date.now() + 10 * 60 * 1000);
     const session = await encrypt({ resultObj, expires });
 
-    cookies().set("session", session, {
+    const cookieStore = await cookies();
+    cookieStore.set("session", session, {
       expires,
       httpOnly: true,
       secure: true,
@@ -145,14 +147,20 @@ export async function login(prevState, formData) {
   const expires = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
   const session = await encrypt({ resultObj, expires });
 
-  cookies().set("session", session, { expires, httpOnly: true, secure: true });
+  const cookieStore = await cookies();
+  cookieStore.set("session", session, {
+    expires,
+    httpOnly: true,
+    secure: true,
+  });
 
   revalidatePath("/");
   redirect("/");
 }
 
 export async function logout() {
-  cookies().set("session", "", { expires: new Date(0) });
+  const cookieStore = await cookies();
+  cookieStore.set("session", "", { expires: new Date(0) });
 }
 
 export async function updateSession(request) {
@@ -450,7 +458,7 @@ export async function deleteTask(taskId) {
 
   await sql`DELETE FROM tasks WHERE id = ${taskId} AND user_id = ${userId};`;
 
-  revalidatePath("/tasks");
+  revalidatePath("/dashboard");
   return { message: "Task deleted" };
 }
 
