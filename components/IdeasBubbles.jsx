@@ -142,6 +142,9 @@ const IdeasBubbles = ({ ideas, onUpdate, onDelete }) => {
 
   const handleDelete = (event) => {
     event.preventDefault();
+    if (typeof window !== "undefined" && !window.confirm("Delete this idea?")) {
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
       await onDelete(formData);

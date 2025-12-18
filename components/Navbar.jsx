@@ -18,6 +18,7 @@ const Navbar = async () => {
           <Link href="/dashboard/wrd">WRD</Link>
           <Link href="/dashboard/ideas">Ideas</Link>
           <Link href="/dashboard/projects">Projects</Link>
+          <Link href="/dashboard/websites">Websites</Link>
           <Link href="/dashboard/recipes">Recipes</Link>
           <Link href="/dashboard/memories">Memories</Link>
           <Link href="/dashboard/quotes">Quotes</Link>

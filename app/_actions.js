@@ -522,6 +522,194 @@ export async function getTasks({
 }
 
 //////////////////////////////////////////////////////////////
+// WEBSITES
+//////////////////////////////////////////////////////////////
+
+export async function createWebsite(prevState, formData) {
+  const userId = await requireUserId();
+  const title = normalizeText(formData.get("title"));
+  const link = normalizeText(formData.get("link"));
+  const host = normalizeText(formData.get("host"));
+  const domainHost = normalizeText(formData.get("domainHost"));
+  const projectId = normalizeText(formData.get("projectId"));
+  const details = normalizeText(formData.get("details"));
+
+  if (!title) return { message: "Title is required" };
+
+  const { rows } = await sql`
+    INSERT INTO websites (user_id, project_id, title, link, host, domain_host, details, created_at, updated_at)
+    VALUES (
+      ${userId}::uuid,
+      NULLIF(${projectId}, '')::uuid,
+      ${title},
+      ${link},
+      ${host},
+      ${domainHost},
+      ${details},
+      NOW(),
+      NOW()
+    )
+    RETURNING id;
+  `;
+
+  revalidatePath("/dashboard/websites");
+  return { message: "Website created", id: rows[0]?.id };
+}
+
+export async function updateWebsite(prevState, formData) {
+  const userId = await requireUserId();
+  const id = formData.get("id");
+  if (!id) return { message: "Missing id" };
+
+  const title = normalizeText(formData.get("title"));
+  const link = normalizeText(formData.get("link"));
+  const host = normalizeText(formData.get("host"));
+  const domainHost = normalizeText(formData.get("domainHost"));
+  const projectId = normalizeText(formData.get("projectId"));
+  const details = normalizeText(formData.get("details"));
+
+  await sql`
+    UPDATE websites
+    SET
+      title = COALESCE(NULLIF(${title}, ''), title),
+      link = COALESCE(${link}, link),
+      host = COALESCE(${host}, host),
+      domain_host = COALESCE(${domainHost}, domain_host),
+      project_id = COALESCE(NULLIF(${projectId}, '')::uuid, project_id),
+      details = COALESCE(${details}, details),
+      updated_at = NOW()
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;
+  `;
+
+  revalidatePath("/dashboard/websites");
+  return { message: "Website updated" };
+}
+
+export async function deleteWebsite(input) {
+  const userId = await requireUserId();
+  const id = input?.get ? input.get("id") : input;
+  if (!id) return { message: "Missing id" };
+
+  await sql`DELETE FROM websites WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;`;
+
+  revalidatePath("/dashboard/websites");
+  return { message: "Website deleted" };
+}
+
+export async function getWebsites() {
+  const userId = await requireUserId();
+  const { rows } = await sql`
+    SELECT *
+    FROM websites
+    WHERE user_id = ${userId}::uuid
+    ORDER BY created_at DESC;
+  `;
+  return rows;
+}
+
+//////////////////////////////////////////////////////////////
+// WEBSITE TASKS
+//////////////////////////////////////////////////////////////
+
+export async function createWebsiteTask(prevState, formData) {
+  const userId = await requireUserId();
+  const websiteId = formData.get("websiteId");
+  const title = normalizeText(formData.get("title"));
+  const dueDate = normalizeText(formData.get("dueDate"));
+  const details = normalizeText(formData.get("details"));
+
+  if (!websiteId) return { message: "Website is required" };
+  if (!title) return { message: "Title is required" };
+
+  const { rows } = await sql`
+    INSERT INTO website_tasks (website_id, user_id, title, due_date, details, status, created_at, updated_at)
+    VALUES (
+      ${websiteId}::uuid,
+      ${userId}::uuid,
+      ${title},
+      NULLIF(${dueDate}, '')::date,
+      ${details},
+      'active',
+      NOW(),
+      NOW()
+    )
+    RETURNING id;
+  `;
+
+  revalidatePath("/dashboard/websites");
+  return { message: "Website task created", id: rows[0]?.id };
+}
+
+export async function updateWebsiteTask(prevState, formData) {
+  const userId = await requireUserId();
+  const id = formData.get("id");
+  if (!id) return { message: "Missing id" };
+
+  const title = normalizeText(formData.get("title"));
+  const details = normalizeText(formData.get("details"));
+  const dueDate = normalizeText(formData.get("dueDate"));
+  const status = normalizeText(formData.get("status"));
+  const websiteId = normalizeText(formData.get("websiteId"));
+
+  const completedAt = status === "completed" ? nowISO() : null;
+
+  await sql`
+    UPDATE website_tasks
+    SET
+      title = COALESCE(NULLIF(${title}, ''), title),
+      details = COALESCE(${details}, details),
+      due_date = COALESCE(NULLIF(${dueDate}, '')::date, due_date),
+      website_id = COALESCE(NULLIF(${websiteId}, '')::uuid, website_id),
+      status = COALESCE(NULLIF(${status}, '')::completion_status, status),
+      completed_at = CASE
+        WHEN NULLIF(${status}, '')::completion_status = 'completed'
+          THEN COALESCE(completed_at, ${completedAt}::timestamptz)
+        WHEN NULLIF(${status}, '') IS NULL THEN completed_at
+        ELSE NULL
+      END,
+      updated_at = NOW()
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;
+  `;
+
+  revalidatePath("/dashboard/websites");
+  return { message: "Website task updated" };
+}
+
+export async function deleteWebsiteTask(input) {
+  const userId = await requireUserId();
+  const id = input?.get ? input.get("id") : input;
+  if (!id) return { message: "Missing id" };
+
+  await sql`DELETE FROM website_tasks WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;`;
+
+  revalidatePath("/dashboard/websites");
+  return { message: "Website task deleted" };
+}
+
+export async function getWebsiteTasks({ websiteId = null, status = null } = {}) {
+  const userId = await requireUserId();
+  const wid = websiteId ? String(websiteId) : null;
+  const st = status ? String(status) : null;
+
+  const { rows } = await sql`
+    SELECT *
+    FROM website_tasks
+    WHERE user_id = ${userId}::uuid
+      AND (
+        NULLIF(${wid}, '')::uuid IS NULL
+        OR website_id = NULLIF(${wid}, '')::uuid
+      )
+      AND (
+        NULLIF(${st}, '')::completion_status IS NULL
+        OR status = NULLIF(${st}, '')::completion_status
+      )
+    ORDER BY status ASC, due_date NULLS LAST, created_at DESC;
+  `;
+
+  return rows;
+}
+
+//////////////////////////////////////////////////////////////
 // GOAL <-> TASK LINKS
 //////////////////////////////////////////////////////////////
 

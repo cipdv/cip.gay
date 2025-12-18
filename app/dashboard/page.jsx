@@ -3,7 +3,7 @@ import { getTasks, getQuotes } from "@/app/_actions";
 
 const DashboardPage = async () => {
   const today = new Date().toISOString().slice(0, 10);
-  const tasks = await getTasks({ from: today });
+  const tasks = await getTasks();
   const quotes = await getQuotes();
   const randomQuote =
     Array.isArray(quotes) && quotes.length > 0

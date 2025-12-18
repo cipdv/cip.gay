@@ -43,7 +43,7 @@ export default function DashboardTabs({ initialTasks }) {
   const tasks = useMemo(() => {
     const arr = Array.isArray(initialTasks) ? initialTasks : [];
     return arr
-      .filter((t) => t.status !== "completed")
+      .filter((t) => t.status === "active")
       .sort((a, b) => {
         const ad = a.due_date ? new Date(a.due_date).getTime() : Infinity;
         const bd = b.due_date ? new Date(b.due_date).getTime() : Infinity;
@@ -54,6 +54,18 @@ export default function DashboardTabs({ initialTasks }) {
         return bc - ac;
       });
   }, [initialTasks]);
+
+  const completedToday = useMemo(() => {
+    const arr = Array.isArray(initialTasks) ? initialTasks : [];
+    return arr.filter((t) => {
+      if (t.status !== "completed" || !t.completed_at) return false;
+      try {
+        return new Date(t.completed_at).toISOString().slice(0, 10) === today;
+      } catch {
+        return false;
+      }
+    });
+  }, [initialTasks, today]);
 
   return (
     <div className="border border-black">
@@ -126,6 +138,22 @@ export default function DashboardTabs({ initialTasks }) {
               </div>
             </form>
 
+            {/* Completed today */}
+            <div className="border border-black p-3 mb-6">
+              <h2 className="font-semibold text-sm mb-2">Completed today</h2>
+              {completedToday.length === 0 ? (
+                <p className="text-sm">No tasks completed today.</p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {completedToday.map((t) => (
+                    <li key={t.id} className="p-1 border-b border-dotted border-black/50 last:border-b-0">
+                      {t.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
             {/* Upcoming tasks list */}
             {tasks.length === 0 ? (
               <p>No upcoming tasks.</p>
@@ -176,7 +204,14 @@ export default function DashboardTabs({ initialTasks }) {
 
                             <div className="flex flex-col gap-2 h-full">
                               <form
-                                action={async () => {
+                                onSubmit={async (e) => {
+                                  e.preventDefault();
+                                  if (
+                                    typeof window !== "undefined" &&
+                                    !window.confirm("Delete this task?")
+                                  ) {
+                                    return;
+                                  }
                                   await deleteTask(t.id);
                                   router.refresh();
                                 }}

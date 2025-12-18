@@ -223,6 +223,9 @@ const ToBuyList = ({ items, onComplete, onDelete, onUpdate }) => {
 
   const handleDelete = (event) => {
     event.preventDefault();
+    if (typeof window !== "undefined" && !window.confirm("Delete this item?")) {
+      return;
+    }
     const formData = new FormData(event.currentTarget);
     startTransition(async () => {
       await (onDelete || deleteToBuy)(formData);
