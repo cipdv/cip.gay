@@ -4,7 +4,7 @@ import SignInForm from "@/components/SignInForm";
 
 export default function Home() {
   return (
-    <section>
+    <section className="flex justify-center">
       <SignInForm />
     </section>
   );

@@ -1,20 +1,25 @@
 import DashboardTabs from "@/components/DashboardTabs";
-import { getTasks } from "@/app/_actions";
+import { getTasks, getQuotes } from "@/app/_actions";
 
 const DashboardPage = async () => {
   const today = new Date().toISOString().slice(0, 10);
   const tasks = await getTasks({ from: today });
-
-  console.log(tasks);
+  const quotes = await getQuotes();
+  const randomQuote =
+    Array.isArray(quotes) && quotes.length > 0
+      ? quotes[Math.floor(Math.random() * quotes.length)]
+      : null;
 
   return (
     <section className="px-10 py-8">
       {/* Quote section (placeholder like your mock) */}
       <div className="border border-black p-6 mb-8">
         <p className="text-center text-lg">
-          "a section where a quote would go."
+          {randomQuote?.quote || "No quotes yet."}
         </p>
-        <p className="text-center mt-4">-by Quote author</p>
+        <p className="text-center mt-4">
+          {randomQuote?.author ? `- ${randomQuote.author}` : ""}
+        </p>
       </div>
 
       <DashboardTabs initialTasks={tasks || []} />

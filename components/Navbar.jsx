@@ -6,7 +6,7 @@ const Navbar = async () => {
   const currentUser = await getSession();
 
   return (
-    <div className="px-10 py-6 bg-navbar flex justify-between items-center border-b border-black">
+    <div className="px-4 sm:px-6 lg:px-10 py-6 bg-navbar flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-black">
       <Link href="/" className="no-underline">
         <h1 className="text-lg">
           Just for {currentUser?.resultObj?.firstName || "_______"}
@@ -14,7 +14,7 @@ const Navbar = async () => {
       </Link>
 
       {currentUser ? (
-        <div className="flex items-center gap-6">
+        <div className="flex flex-wrap items-center gap-4 sm:gap-6">
           <Link href="/dashboard/wrd">WRD</Link>
           <Link href="/dashboard/ideas">Ideas</Link>
           <Link href="/dashboard/projects">Projects</Link>

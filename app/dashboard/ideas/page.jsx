@@ -1,16 +1,34 @@
 import IdeasForm from "@/components/IdeasForm";
-import { getAllIdeas } from "../../_actions";
 import IdeasBubbles from "@/components/IdeasBubbles";
+import { getIdeas, updateIdea, deleteIdea } from "@/app/_actions";
 
-const ideasPage = async () => {
-  const ideas = await getAllIdeas();
+const IdeasPage = async () => {
+  const ideas = await getIdeas();
+  const listKey = Array.isArray(ideas)
+    ? ideas.map((i) => `${i.id}-${i.updated_at || ""}`).join("|")
+    : "ideas-empty";
+
+  const updateAction = async (formData) => {
+    "use server";
+    await updateIdea(formData);
+  };
+
+  const deleteAction = async (formData) => {
+    "use server";
+    await deleteIdea(formData);
+  };
 
   return (
-    <div className="space-y-10 ml-24 mr-24 mt-6 mb-12">
+    <div className="space-y-10 px-4 sm:px-6 lg:px-10 mt-6 mb-12 w-full max-w-4xl mx-auto">
       <IdeasForm />
-      <IdeasBubbles ideas={ideas} />
+      <IdeasBubbles
+        key={listKey}
+        ideas={ideas}
+        onUpdate={updateAction}
+        onDelete={deleteAction}
+      />
     </div>
   );
 };
 
-export default ideasPage;
+export default IdeasPage;

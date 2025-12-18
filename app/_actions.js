@@ -585,57 +585,81 @@ export async function createWrdItem(prevState, formData) {
   const category = formData.get("category"); // 'do' | 'watch' | 'read' | 'go' | 'eat'
   const name = normalizeText(formData.get("name"));
   const details = normalizeText(formData.get("details"));
+  const genre = normalizeText(formData.get("genre")); // optional
 
   if (!category || !name) return { message: "Category and name are required" };
 
   const { rows } = await sql`
-    INSERT INTO wrd_items (user_id, category, name, details, status, created_at, updated_at)
-    VALUES (${userId}, ${category}::wrd_category, ${name}, ${details}, 'active', NOW(), NOW())
+    INSERT INTO wrd_items (user_id, category, name, details, genre, status, created_at, updated_at)
+    VALUES (${userId}, ${category}::wrd_category, ${name}, ${details}, ${genre}, 'active', NOW(), NOW())
     RETURNING id;
   `;
 
-  revalidatePath("/wrd");
+  revalidatePath("/dashboard/wrd");
   return { message: "Item created", id: rows[0]?.id };
 }
 
-export async function updateWrdItem(prevState, formData) {
+export async function updateWrdItem(input, maybeFormData) {
+  const formData =
+    maybeFormData && typeof maybeFormData.get === "function"
+      ? maybeFormData
+      : input && typeof input.get === "function"
+      ? input
+      : null;
+  if (!formData) return { message: "Missing form data" };
+
+  // Debug: log incoming form data keys/values
+  try {
+    const debugEntries = Object.fromEntries(formData.entries());
+    console.log("updateWrdItem incoming formData:", debugEntries);
+  } catch (err) {
+    console.log("updateWrdItem could not read formData", err);
+  }
+
   const userId = await requireUserId();
   const id = formData.get("id");
   if (!id) return { message: "Missing id" };
 
-  const category = formData.get("category");
+  const category = normalizeText(formData.get("category")); // wrd_category | null
   const name = normalizeText(formData.get("name"));
   const details = normalizeText(formData.get("details"));
-  const status = formData.get("status"); // completion_status
+  const status = normalizeText(formData.get("status")); // completion_status | null
+  const genre = normalizeText(formData.get("genre")); // optional | null
   const completedAt = status === "completed" ? nowISO() : null;
+
+  console.log("updateWrdItem normalized", { id, category, name, details, genre, status, completedAt });
 
   await sql`
     UPDATE wrd_items
     SET
-      category = COALESCE(${category}::wrd_category, category),
+      category = COALESCE(NULLIF(${category}, '')::wrd_category, category),
       name = COALESCE(${name}, name),
       details = COALESCE(${details}, details),
-      status = COALESCE(${status}, status),
+      genre = COALESCE(${genre}, genre),
+      status = COALESCE(NULLIF(${status}, '')::completion_status, status),
       completed_at = CASE
-        WHEN ${status} = 'completed' THEN COALESCE(completed_at, ${completedAt}::timestamptz)
-        WHEN ${status} IS NULL THEN completed_at
+        WHEN NULLIF(${status}, '')::completion_status = 'completed'
+          THEN COALESCE(completed_at, ${completedAt}::timestamptz)
+        WHEN NULLIF(${status}, '') IS NULL THEN completed_at
         ELSE NULL
       END,
       updated_at = NOW()
-    WHERE id = ${id} AND user_id = ${userId};
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;
   `;
 
-  revalidatePath("/wrd");
+  revalidatePath("/dashboard/wrd");
   return { message: "Item updated" };
 }
 
-export async function deleteWrdItem(id) {
+export async function deleteWrdItem(input) {
   const userId = await requireUserId();
+  const id =
+    input instanceof FormData ? input.get("id") : input;
   if (!id) return { message: "Missing id" };
 
-  await sql`DELETE FROM wrd_items WHERE id = ${id} AND user_id = ${userId};`;
+  await sql`DELETE FROM wrd_items WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;`;
 
-  revalidatePath("/wrd");
+  revalidatePath("/dashboard/wrd");
   return { message: "Item deleted" };
 }
 
@@ -673,26 +697,34 @@ export async function createIdea(prevState, formData) {
   return { message: "Idea created", id: rows[0]?.id };
 }
 
-export async function updateIdea(prevState, formData) {
+export async function updateIdea(input, maybeFormData) {
+  const formData =
+    maybeFormData && typeof maybeFormData.get === "function"
+      ? maybeFormData
+      : input && typeof input.get === "function"
+      ? input
+      : null;
+  if (!formData) return { message: "Missing form data" };
+
   const userId = await requireUserId();
   const id = formData.get("id");
   if (!id) return { message: "Missing id" };
 
   const idea = normalizeText(formData.get("idea"));
   const details = normalizeText(formData.get("details"));
-  const status = formData.get("status");
+  const status = normalizeText(formData.get("status"));
 
   await sql`
     UPDATE ideas
     SET
       idea = COALESCE(${idea}, idea),
       details = COALESCE(${details}, details),
-      status = COALESCE(${status}::idea_status, status),
+      status = COALESCE(NULLIF(${status}, '')::idea_status, status),
       updated_at = NOW()
     WHERE id = ${id} AND user_id = ${userId};
   `;
 
-  revalidatePath("/ideas");
+  revalidatePath("/dashboard/ideas");
   return { message: "Idea updated" };
 }
 
@@ -700,9 +732,12 @@ export async function deleteIdea(id) {
   const userId = await requireUserId();
   if (!id) return { message: "Missing id" };
 
-  await sql`DELETE FROM ideas WHERE id = ${id} AND user_id = ${userId};`;
+  const ideaId = id && typeof id === "object" && id.get ? id.get("id") : id;
+  if (!ideaId) return { message: "Missing id" };
 
-  revalidatePath("/ideas");
+  await sql`DELETE FROM ideas WHERE id = ${ideaId} AND user_id = ${userId};`;
+
+  revalidatePath("/dashboard/ideas");
   return { message: "Idea deleted" };
 }
 
@@ -1205,7 +1240,7 @@ export async function createToBuy(prevState, formData) {
   const userId = await requireUserId();
   const item = normalizeText(formData.get("item"));
   const link = normalizeText(formData.get("link"));
-  const price = formData.get("price"); // number/string
+  const price = normalizeText(formData.get("price")); // string -> numeric or null
   const needOrWant = formData.get("needOrWant") || "want"; // 'need'|'want'
   const status = formData.get("status") || "unpurchased"; // 'unpurchased'|'purchased'
 
@@ -1219,7 +1254,7 @@ export async function createToBuy(prevState, formData) {
       ${userId},
       ${item},
       ${link},
-      ${price}::numeric,
+      NULLIF(${price}, '')::numeric,
       ${needOrWant}::need_want,
       ${status}::purchase_status,
       ${purchasedAt}::timestamptz,
@@ -1240,9 +1275,9 @@ export async function updateToBuy(prevState, formData) {
 
   const item = normalizeText(formData.get("item"));
   const link = normalizeText(formData.get("link"));
-  const price = formData.get("price");
-  const needOrWant = formData.get("needOrWant");
-  const status = formData.get("status");
+  const price = normalizeText(formData.get("price")); // numeric or null
+  const needOrWant = normalizeText(formData.get("needOrWant")); // 'need' | 'want' | null
+  const status = normalizeText(formData.get("status")); // 'unpurchased' | 'purchased' | null
 
   const purchasedAt = status === "purchased" ? nowISO() : null;
 
@@ -1251,24 +1286,26 @@ export async function updateToBuy(prevState, formData) {
     SET
       item = COALESCE(${item}, item),
       link = COALESCE(${link}, link),
-      price = COALESCE(${price}::numeric, price),
-      need_or_want = COALESCE(${needOrWant}::need_want, need_or_want),
-      status = COALESCE(${status}::purchase_status, status),
+      price = COALESCE(NULLIF(${price}, '')::numeric, price),
+      need_or_want = COALESCE(NULLIF(${needOrWant}, '')::need_want, need_or_want),
+      status = COALESCE(NULLIF(${status}, '')::purchase_status, status),
       purchased_at = CASE
-        WHEN ${status} = 'purchased' THEN COALESCE(purchased_at, ${purchasedAt}::timestamptz)
-        WHEN ${status} IS NULL THEN purchased_at
+        WHEN NULLIF(${status}, '')::purchase_status = 'purchased'
+          THEN COALESCE(purchased_at, ${purchasedAt}::timestamptz)
+        WHEN NULLIF(${status}, '') IS NULL THEN purchased_at
         ELSE NULL
       END,
       updated_at = NOW()
-    WHERE id = ${id} AND user_id = ${userId};
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;
   `;
 
   revalidatePath("/to-buy");
   return { message: "Updated" };
 }
 
-export async function deleteToBuy(id) {
+export async function deleteToBuy(input) {
   const userId = await requireUserId();
+  const id = input?.get ? input.get("id") : input;
   if (!id) return { message: "Missing id" };
 
   await sql`DELETE FROM to_buy WHERE id = ${id} AND user_id = ${userId};`;

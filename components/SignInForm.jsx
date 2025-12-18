@@ -1,6 +1,6 @@
 "use client";
 
-import { login, registerNewMember } from "@/app/_actions";
+import { login } from "@/app/_actions";
 import { useFormStatus } from "react-dom";
 import { useActionState, useState } from "react";
 
@@ -11,115 +11,66 @@ const initialState = {
 function SubmitButton({ label }) {
   const { pending } = useFormStatus();
 
+  const isLogin = label.toLowerCase().includes("sign");
+
   return (
-    <button type="submit" aria-disabled={pending} className="btn mt-4">
+    <button
+      type="submit"
+      aria-disabled={pending}
+      className={`mt-4 border border-black px-4 py-2 rounded-none ${
+        isLogin ? "btn" : "bg-transparent"
+      }`}
+    >
       {pending ? `${label}...` : label}
     </button>
   );
 }
 
 const SignInForm = () => {
-  const [mode, setMode] = useState("login"); // "login" | "register"
-
   const [loginState, loginAction] = useActionState(login, initialState);
-  const [registerState, registerAction] = useActionState(
-    registerNewMember,
-    initialState
-  );
 
   const [showPassword, setShowPassword] = useState(false);
 
   return (
-    <div className="bg-blue-100 p-4 rounded-md mt-6 w-full lg:w-2/5 mx-auto">
-      <div className="flex justify-between mb-4">
-        <button
-          type="button"
-          className={`font-bold ${mode === "login" ? "underline" : ""}`}
-          onClick={() => setMode("login")}
-        >
-          Sign in
-        </button>
-        <button
-          type="button"
-          className={`font-bold ${mode === "register" ? "underline" : ""}`}
-          onClick={() => setMode("register")}
-        >
-          Register
-        </button>
-      </div>
+    <div className="border border-black p-6 rounded-none mt-6 w-full max-w-lg mx-auto bg-transparent">
+      <form action={loginAction}>
+        <h1 className="text-2xl font-bold mb-4">Sign in</h1>
 
-      {mode === "login" && (
-        <form action={loginAction}>
-          <h1 className="text-2xl font-bold mb-4">Sign in</h1>
+        <input
+          type="email"
+          placeholder="Email"
+          name="email"
+          required
+          className="block mb-4 w-full border border-black p-2 rounded-none bg-transparent"
+        />
 
-          <input
-            type="email"
-            placeholder="Email"
-            name="email"
-            required
-            className="block mb-4 w-full"
-          />
-
-          <div className="flex items-center mb-2">
-            <input
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              name="password"
-              required
-              className="block mr-2 w-full"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="ml-2"
-            >
-              {showPassword ? (
-                <img src="/images/icons8-hide-16.png" alt="Hide password" />
-              ) : (
-                <img src="/images/icons8-eye-16.png" alt="Show password" />
-              )}
-            </button>
-          </div>
-
-          {loginState?.message && (
-            <p className="text-red-500 font-bold">{loginState.message}</p>
-          )}
-
-          <SubmitButton label="Sign in" />
-        </form>
-      )}
-
-      {mode === "register" && (
-        <form action={registerAction}>
-          <h1 className="text-2xl font-bold mb-4">Register</h1>
-
-          {/* Temporary placeholders since registerNewMember expects names */}
-          <input type="hidden" name="firstName" value="Cip" />
-          <input type="hidden" name="lastName" value="User" />
-
-          <input
-            type="email"
-            placeholder="Email"
-            name="email"
-            required
-            className="block mb-4 w-full"
-          />
-
+        <div className="flex items-center mb-2">
           <input
             type={showPassword ? "text" : "password"}
             placeholder="Password"
             name="password"
             required
-            className="block mb-2 w-full"
+            className="block mr-2 w-full border border-black p-2 rounded-none bg-transparent"
           />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="ml-2 border border-black px-3 py-2 rounded-none bg-transparent"
+          >
+            {showPassword ? (
+              <img src="/images/icons8-hide-16.png" alt="Hide password" />
+            ) : (
+              <img src="/images/icons8-eye-16.png" alt="Show password" />
+            )}
+          </button>
+        </div>
 
-          {registerState?.message && (
-            <p className="text-red-500 font-bold">{registerState.message}</p>
-          )}
+        {loginState?.message && (
+          <p className="text-red-500 font-bold">{loginState.message}</p>
+        )}
 
-          <SubmitButton label="Register" />
-        </form>
-      )}
+        <SubmitButton label="Sign in" />
+      </form>
     </div>
   );
 };

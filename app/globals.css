@@ -8,10 +8,25 @@
   --background-end-rgb: 255, 255, 255;
 }
 
+html {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background-color: #b1b695;
   line-height: 1.6;
+  margin: 0;
+  overflow-x: hidden;
 }
 
 @layer utilities {
@@ -38,7 +53,7 @@ h3 {
 section {
   margin: 2rem auto 3rem;
   padding: 2rem;
-  max-width: 1024px;
+  max-width: min(1024px, 100%);
   width: 100%;
   --space-y-reverse: 0;
 }
@@ -84,6 +99,12 @@ select {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #000;
+  opacity: 1;
+}
+
 input:focus,
 textarea:focus,
 select:focus {
@@ -91,6 +112,11 @@ select:focus {
   outline-offset: 1px;
   border-color: #94a3b8;
   box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.25);
+}
+
+.to-buy-select option:hover {
+  background-color: #9ca37f !important;
+  color: #000;
 }
 
 .glassmorphism {

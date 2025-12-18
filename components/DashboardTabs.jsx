@@ -11,12 +11,12 @@ import {
   createDream,
 } from "@/app/_actions";
 
-function SubmitButton({ children }) {
+function SubmitButton({ children, className = "" }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
-      className="btn border border-black"
+      className={`btn border border-black rounded-none ${className}`}
       disabled={pending}
     >
       {pending ? "Saving..." : children}
@@ -104,7 +104,7 @@ export default function DashboardTabs({ initialTasks }) {
                 <input
                   name="title"
                   placeholder="Task title"
-                  className="border border-black p-2"
+                  className="border border-black p-2 rounded-none bg-transparent"
                   required
                 />
 
@@ -112,13 +112,13 @@ export default function DashboardTabs({ initialTasks }) {
                   name="dueDate"
                   type="date"
                   defaultValue={today}
-                  className="border border-black p-2"
+                  className="border border-black p-2 rounded-none bg-transparent"
                 />
 
                 <textarea
                   name="details"
                   placeholder="Details (optional)"
-                  className="border border-black p-2"
+                  className="border border-black p-2 rounded-none bg-transparent"
                   rows={3}
                 />
 
@@ -127,125 +127,136 @@ export default function DashboardTabs({ initialTasks }) {
             </form>
 
             {/* Upcoming tasks list */}
-            <div className="border border-black p-4">
-              <h2 className="font-bold mb-3">Upcoming tasks</h2>
+            {tasks.length === 0 ? (
+              <p>No upcoming tasks.</p>
+            ) : (
+              <ul className="flex flex-col gap-3">
+                {tasks.map((t) => {
+                  const isEditing = editingId === t.id;
+                  const dueDateStr = formatDateOnly(t.due_date);
 
-              {tasks.length === 0 ? (
-                <p>No upcoming tasks.</p>
-              ) : (
-                <ul className="flex flex-col gap-3">
-                  {tasks.map((t) => {
-                    const isEditing = editingId === t.id;
-                    const dueDateStr = formatDateOnly(t.due_date);
-
-                    return (
-                      <li key={t.id} className="border border-black p-3">
-                        {!isEditing ? (
-                          <div className="flex justify-between gap-4">
-                            <div>
-                              <div className="font-bold">{t.title}</div>
-                              {dueDateStr && (
-                                <div className="text-sm">Due: {dueDateStr}</div>
-                              )}
-                              {t.details && (
-                                <div className="text-sm mt-2">{t.details}</div>
-                              )}
+                  return (
+                    <li key={t.id} className="border border-black p-3 bg-white/70">
+                      {!isEditing ? (
+                        <div className="flex justify-between gap-4 items-start">
+                          <div className="min-w-0 flex-1 space-y-1 break-words">
+                            <div className="font-bold break-words">
+                              {t.title}
                             </div>
+                            {dueDateStr && (
+                              <div className="text-sm break-words">
+                                Due: {dueDateStr}
+                              </div>
+                            )}
+                            {t.details && (
+                              <div className="text-sm mt-2 break-words">
+                                {t.details}
+                              </div>
+                            )}
+                          </div>
 
-                            <div className="flex gap-2 items-start">
-                              {/* Complete */}
-                              <form
-                                action={async (formData) => {
-                                  await updateTask(formData);
-                                  router.refresh();
-                                }}
-                              >
-                                <input
-                                  type="hidden"
-                                  name="taskId"
-                                  value={t.id}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="status"
-                                  value="completed"
-                                />
-                                <SubmitButton>Complete</SubmitButton>
-                              </form>
+                          <div className="flex-shrink-0 flex items-stretch gap-2">
+                            <form
+                              action={async (formData) => {
+                                await updateTask(formData);
+                                router.refresh();
+                              }}
+                              className="flex"
+                            >
+                              <input type="hidden" name="taskId" value={t.id} />
+                              <input
+                                type="hidden"
+                                name="status"
+                                value="completed"
+                              />
+                              <SubmitButton className="h-full">
+                                Complete
+                              </SubmitButton>
+                            </form>
 
-                              <button
-                                type="button"
-                                className="btn border border-black"
-                                onClick={() => setEditingId(t.id)}
-                              >
-                                Edit
-                              </button>
-
-                              {/* Delete */}
+                            <div className="flex flex-col gap-2 h-full">
                               <form
                                 action={async () => {
                                   await deleteTask(t.id);
                                   router.refresh();
                                 }}
+                                className="flex-1"
                               >
                                 <button
                                   type="submit"
-                                  className="btn border border-black"
+                                  className="border border-black rounded-none p-2 w-full h-full hover:bg-[#e0e5c7]"
+                                  aria-label="Delete task"
+                                  title="Delete task"
                                 >
-                                  Delete
+                                  <img
+                                    src="/images/icons8-eye-16.png"
+                                    alt="Delete task"
+                                  />
                                 </button>
                               </form>
-                            </div>
-                          </div>
-                        ) : (
-                          <form
-                            action={async (formData) => {
-                              await updateTask(formData);
-                              setEditingId(null);
-                              router.refresh();
-                            }}
-                            className="grid gap-3"
-                          >
-                            <input type="hidden" name="taskId" value={t.id} />
-
-                            <input
-                              name="title"
-                              defaultValue={t.title}
-                              className="border border-black p-2"
-                            />
-
-                            <input
-                              name="dueDate"
-                              type="date"
-                              defaultValue={dueDateStr || ""}
-                              className="border border-black p-2"
-                            />
-
-                            <textarea
-                              name="details"
-                              defaultValue={t.details || ""}
-                              className="border border-black p-2"
-                              rows={3}
-                            />
-
-                            <div className="flex gap-2">
-                              <SubmitButton>Save</SubmitButton>
                               <button
                                 type="button"
-                                className="btn border border-black"
-                                onClick={() => setEditingId(null)}
+                                className="border border-black rounded-none p-2 w-full h-full hover:bg-[#e0e5c7]"
+                                aria-label="Edit task"
+                                title="Edit task"
+                                onClick={() => setEditingId(t.id)}
                               >
-                                Cancel
+                                <img
+                                  src="/images/icons8-hide-16.png"
+                                  alt="Edit task"
+                                />
                               </button>
                             </div>
-                          </form>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <form
+                          action={async (formData) => {
+                            await updateTask(formData);
+                            setEditingId(null);
+                            router.refresh();
+                          }}
+                          className="grid gap-3"
+                        >
+                          <input type="hidden" name="taskId" value={t.id} />
+
+                          <input
+                            name="title"
+                            defaultValue={t.title}
+                            className="border border-black p-2 rounded-none"
+                          />
+
+                          <input
+                            name="dueDate"
+                            type="date"
+                            defaultValue={dueDateStr || ""}
+                            className="border border-black p-2 rounded-none"
+                          />
+
+                          <textarea
+                            name="details"
+                            defaultValue={t.details || ""}
+                            className="border border-black p-2 rounded-none"
+                            rows={3}
+                          />
+
+                          <div className="flex gap-2">
+                            <SubmitButton>Save</SubmitButton>
+                            <button
+                              type="button"
+                              className="btn border border-black"
+                              onClick={() => setEditingId(null)}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         )}
 
@@ -264,12 +275,12 @@ export default function DashboardTabs({ initialTasks }) {
                 type="date"
                 name="entryDate"
                 defaultValue={today}
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
               />
 
               <select
                 name="privacy"
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
                 defaultValue="private"
               >
                 <option value="private">private</option>
@@ -279,25 +290,25 @@ export default function DashboardTabs({ initialTasks }) {
               <input
                 name="moodStart"
                 placeholder="Mood (start)"
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
               />
               <input
                 name="moodEnd"
                 placeholder="Mood (end)"
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
               />
 
               <textarea
                 name="reflections"
                 placeholder="Reflections"
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
                 rows={6}
               />
 
               <textarea
                 name="lessonLearned"
                 placeholder="Lesson learned"
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
                 rows={3}
               />
 
@@ -321,13 +332,13 @@ export default function DashboardTabs({ initialTasks }) {
                 type="date"
                 name="dreamDate"
                 defaultValue={today}
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
               />
 
               <textarea
                 name="dream"
                 placeholder="text area to write dreams"
-                className="border border-black p-2"
+                className="border border-black p-2 rounded-none"
                 rows={10}
                 required
               />
