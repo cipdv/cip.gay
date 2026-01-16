@@ -23,6 +23,7 @@ const WebsitesList = ({ websites, tasks }) => {
   const [isPending, startTransition] = useTransition();
   const [expandedId, setExpandedId] = useState(null);
   const [addingFor, setAddingFor] = useState(null);
+  const [showCompletedFor, setShowCompletedFor] = useState({});
 
   if (!websites?.length) {
     return <p className="mt-4">No websites yet.</p>;
@@ -214,79 +215,106 @@ const WebsitesList = ({ websites, tasks }) => {
                   <p className="text-sm">No tasks yet.</p>
                 ) : (
                   <div className="space-y-2">
-                    {siteTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="border border-black rounded-none p-3 bg-white/70 flex justify-between gap-4 items-start"
-                      >
-                        <div className="min-w-0 space-y-1 break-words flex-1">
-                          <div className="font-bold break-words">
-                            {task.title}
-                          </div>
-                          {task.due_date && (
-                            <div className="text-sm">
-                              Due: {formatDate(task.due_date)}
+                    {siteTasks
+                      .filter(
+                        (task) =>
+                          task.status === "active" ||
+                          showCompletedFor[site.id] === true
+                      )
+                      .map((task) => (
+                        <div
+                          key={task.id}
+                          className="border border-black rounded-none p-3 bg-white/70 flex justify-between gap-4 items-start"
+                        >
+                          <div className="min-w-0 space-y-1 break-words flex-1">
+                            <div className="font-bold break-words">
+                              {task.title}
                             </div>
-                          )}
-                          {task.details && (
-                            <div
-                              className="text-sm break-words"
-                              dangerouslySetInnerHTML={{
-                                __html: task.details.replace(/\n/g, "<br />"),
-                              }}
-                            />
-                          )}
-                          {task.created_at && (
-                            <div className="text-xs text-gray-700">
-                              Created: {formatDate(task.created_at)}
-                            </div>
-                          )}
-                          {task.status === "completed" && task.completed_at && (
-                            <div className="text-xs text-gray-700">
-                              Completed: {formatDate(task.completed_at)}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="flex-shrink-0 flex items-stretch gap-2">
-                          {task.status !== "completed" ? (
-                            <form className="flex" onSubmit={handleCompleteTask}>
-                              <input type="hidden" name="id" value={task.id} />
-                              <input
-                                type="hidden"
-                                name="status"
-                                value="completed"
+                            {task.due_date && (
+                              <div className="text-sm">
+                                Due: {formatDate(task.due_date)}
+                              </div>
+                            )}
+                            {task.details && (
+                              <div
+                                className="text-sm break-words"
+                                dangerouslySetInnerHTML={{
+                                  __html: task.details.replace(/\n/g, "<br />"),
+                                }}
                               />
+                            )}
+                            {task.created_at && (
+                              <div className="text-xs text-gray-700">
+                                Created: {formatDate(task.created_at)}
+                              </div>
+                            )}
+                            {task.status === "completed" &&
+                              task.completed_at && (
+                                <div className="text-xs text-gray-700">
+                                  Completed: {formatDate(task.completed_at)}
+                                </div>
+                              )}
+                          </div>
+
+                          <div className="flex-shrink-0 flex items-stretch gap-2">
+                            {task.status !== "completed" ? (
+                              <form
+                                className="flex"
+                                onSubmit={handleCompleteTask}
+                              >
+                                <input type="hidden" name="id" value={task.id} />
+                                <input
+                                  type="hidden"
+                                  name="status"
+                                  value="completed"
+                                />
+                                <button
+                                  type="submit"
+                                  className="btn border border-black rounded-none h-full"
+                                >
+                                  Complete
+                                </button>
+                              </form>
+                            ) : (
+                              <div className="text-sm self-center">
+                                Completed
+                              </div>
+                            )}
+
+                            <form className="flex-1" onSubmit={handleDeleteTask}>
+                              <input type="hidden" name="id" value={task.id} />
                               <button
                                 type="submit"
-                                className="btn border border-black rounded-none h-full"
+                                className="border border-black rounded-none p-2 w-10 h-full hover:bg-[#e0e5c7]"
+                                aria-label="Delete task"
+                                title="Delete task"
                               >
-                                Complete
+                                <img
+                                  src="/images/icons8-eye-16.png"
+                                  alt="Delete task"
+                                />
                               </button>
                             </form>
-                          ) : (
-                            <div className="text-sm self-center">Completed</div>
-                          )}
-
-                          <form className="flex-1" onSubmit={handleDeleteTask}>
-                            <input type="hidden" name="id" value={task.id} />
-                            <button
-                              type="submit"
-                              className="border border-black rounded-none p-2 w-10 h-full hover:bg-[#e0e5c7]"
-                              aria-label="Delete task"
-                              title="Delete task"
-                            >
-                              <img
-                                src="/images/icons8-eye-16.png"
-                                alt="Delete task"
-                              />
-                            </button>
-                          </form>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 )}
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="text-sm underline"
+                    onClick={() =>
+                      setShowCompletedFor((prev) => ({
+                        ...prev,
+                        [site.id]: !prev[site.id],
+                      }))
+                    }
+                  >
+                    {showCompletedFor[site.id] ? "Hide completed" : "Show completed"}
+                  </button>
+                </div>
               </div>
             )}
           </div>

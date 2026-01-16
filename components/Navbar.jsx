@@ -17,10 +17,13 @@ const Navbar = async () => {
         <div className="flex flex-wrap items-center gap-4 sm:gap-6">
           <Link href="/dashboard/wrd">WRD</Link>
           <Link href="/dashboard/ideas">Ideas</Link>
+          <Link href="/dashboard/journal">Journal</Link>
           <Link href="/dashboard/projects">Projects</Link>
           <Link href="/dashboard/websites">Websites</Link>
+          <Link href="/dashboard/people">People</Link>
           <Link href="/dashboard/recipes">Recipes</Link>
           <Link href="/dashboard/memories">Memories</Link>
+          <Link href="/dashboard/dreamlab">Dream Lab</Link>
           <Link href="/dashboard/quotes">Quotes</Link>
           <Link href="/dashboard/to-buy">To-Buy</Link>
           <Link href="/dashboard/writing">Writing</Link>

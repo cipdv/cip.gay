@@ -12,36 +12,44 @@ const formatDate = (value) => {
   }
 };
 
-function DisplayRow({ idea, onMove, onDeleteSubmit, onEdit }) {
+function DisplayRow({ idea, onMove, onDeleteSubmit, onEdit, isExpanded, onToggle }) {
   return (
     <div className="border border-black rounded-none p-3 bg-white/70">
       <div className="flex justify-between gap-4 items-start">
-        <div className="min-w-0 space-y-2 flex-1 break-words">
+        <button
+          type="button"
+          className="min-w-0 text-left space-y-2 flex-1 break-words"
+          onClick={onToggle}
+        >
           <h3
             className="font-semibold break-words"
             dangerouslySetInnerHTML={{
               __html: idea?.idea ? idea.idea.replace(/\n/g, "<br />") : "",
             }}
           />
-          <p
-            className="text-sm break-words"
-            dangerouslySetInnerHTML={{
-              __html: idea?.details ? idea.details.replace(/\n/g, "<br />") : "",
-            }}
-          />
-          {idea?.created_at && (
-            <div className="text-xs text-gray-700">{formatDate(idea.created_at)}</div>
+          <div className="text-xs text-gray-700">
+            {idea?.created_at ? formatDate(idea.created_at) : ""}
+          </div>
+          {isExpanded && idea?.details && (
+            <p
+              className="text-sm break-words"
+              dangerouslySetInnerHTML={{
+                __html: idea.details.replace(/\n/g, "<br />"),
+              }}
+            />
           )}
-        </div>
+        </button>
 
         <div className="flex-shrink-0 flex items-stretch gap-2">
-          <button
-            type="button"
-            className="btn border border-black rounded-none h-full"
-            onClick={onMove}
-          >
-            Move to
-          </button>
+          <div className="flex">
+            <button
+              type="button"
+              className="btn border border-black rounded-none h-full"
+              onClick={onMove}
+            >
+              Move to
+            </button>
+          </div>
 
           <div className="flex flex-col gap-2 h-full">
             <form action={onDeleteSubmit} className="flex-1">
@@ -123,6 +131,7 @@ function EditRow({ idea, onUpdateSubmit, onCancel }) {
 
 const IdeasBubbles = ({ ideas, onUpdate, onDelete }) => {
   const [editingId, setEditingId] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -170,6 +179,10 @@ const IdeasBubbles = ({ ideas, onUpdate, onDelete }) => {
             onMove={() => alert("coming sooooon")}
             onDeleteSubmit={handleDelete}
             onEdit={() => setEditingId(idea.id)}
+            isExpanded={expandedId === idea.id}
+            onToggle={() =>
+              setExpandedId((prev) => (prev === idea.id ? null : idea.id))
+            }
           />
         )
       )}

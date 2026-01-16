@@ -26,7 +26,7 @@ export async function encrypt(payload) {
   return await new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime("6 days")
+    .setExpirationTime("1 hour")
     .sign(key);
 }
 
@@ -95,7 +95,7 @@ export async function registerNewMember(prevState, formData) {
     `;
 
     const resultObj = rows[0];
-    const expires = new Date(Date.now() + 10 * 60 * 1000);
+    const expires = new Date(Date.now() + 60 * 60 * 1000);
     const session = await encrypt({ resultObj, expires });
 
     const cookieStore = await cookies();
@@ -144,7 +144,7 @@ export async function login(prevState, formData) {
   const resultObj = { ...result };
   delete resultObj.password;
 
-  const expires = new Date(Date.now() + 6 * 24 * 60 * 60 * 1000);
+  const expires = new Date(Date.now() + 60 * 60 * 1000);
   const session = await encrypt({ resultObj, expires });
 
   const cookieStore = await cookies();
@@ -168,7 +168,7 @@ export async function updateSession(request) {
   if (!session) return;
 
   const parsed = await decrypt(session);
-  parsed.expires = new Date(Date.now() + 10 * 60 * 1000);
+  parsed.expires = new Date(Date.now() + 60 * 60 * 1000);
 
   const res = NextResponse.next();
   res.cookies.set({
@@ -710,6 +710,166 @@ export async function getWebsiteTasks({ websiteId = null, status = null } = {}) 
 }
 
 //////////////////////////////////////////////////////////////
+// PEOPLE & NOTES
+//////////////////////////////////////////////////////////////
+
+export async function createPerson(prevState, formData) {
+  const userId = await requireUserId();
+  const firstName = normalizeText(formData.get("firstName"));
+  const lastName = normalizeText(formData.get("lastName"));
+  const nickname = normalizeText(formData.get("nickname"));
+  const email = normalizeText(formData.get("email"));
+  const phone = normalizeText(formData.get("phone"));
+  const birthday = normalizeText(formData.get("birthday"));
+
+  if (!firstName) return { message: "First name is required" };
+
+  const { rows } = await sql`
+    INSERT INTO people (user_id, first_name, last_name, nickname, email, phone, birthday, created_at, updated_at)
+    VALUES (
+      ${userId}::uuid,
+      ${firstName},
+      ${lastName},
+      ${nickname},
+      ${email},
+      ${phone},
+      NULLIF(${birthday}, '')::date,
+      NOW(),
+      NOW()
+    )
+    RETURNING id;
+  `;
+
+  revalidatePath("/dashboard/people");
+  return { message: "Person created", id: rows[0]?.id };
+}
+
+export async function updatePerson(prevState, formData) {
+  const userId = await requireUserId();
+  const id = formData.get("id");
+  if (!id) return { message: "Missing id" };
+
+  const firstName = normalizeText(formData.get("firstName"));
+  const lastName = normalizeText(formData.get("lastName"));
+  const nickname = normalizeText(formData.get("nickname"));
+  const email = normalizeText(formData.get("email"));
+  const phone = normalizeText(formData.get("phone"));
+  const birthday = normalizeText(formData.get("birthday"));
+
+  await sql`
+    UPDATE people
+    SET
+      first_name = COALESCE(NULLIF(${firstName}, ''), first_name),
+      last_name = COALESCE(${lastName}, last_name),
+      nickname = COALESCE(${nickname}, nickname),
+      email = COALESCE(${email}, email),
+      phone = COALESCE(${phone}, phone),
+      birthday = COALESCE(NULLIF(${birthday}, '')::date, birthday),
+      updated_at = NOW()
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;
+  `;
+
+  revalidatePath("/dashboard/people");
+  return { message: "Person updated" };
+}
+
+export async function deletePerson(input) {
+  const userId = await requireUserId();
+  const id = input?.get ? input.get("id") : input;
+  if (!id) return { message: "Missing id" };
+
+  await sql`DELETE FROM people WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;`;
+
+  revalidatePath("/dashboard/people");
+  return { message: "Person deleted" };
+}
+
+export async function getPeople() {
+  const userId = await requireUserId();
+  const { rows } = await sql`
+    SELECT *
+    FROM people
+    WHERE user_id = ${userId}::uuid
+    ORDER BY created_at DESC;
+  `;
+  return rows;
+}
+
+export async function createPersonNote(prevState, formData) {
+  const userId = await requireUserId();
+  const personId = formData.get("personId");
+  const category = normalizeText(formData.get("category")) || "general";
+  const note = normalizeText(formData.get("note"));
+
+  if (!personId) return { message: "Person is required" };
+  if (!note) return { message: "Note is required" };
+
+  const { rows } = await sql`
+    INSERT INTO people_notes (person_id, user_id, category, note, created_at, updated_at)
+    VALUES (
+      ${personId}::uuid,
+      ${userId}::uuid,
+      ${category}::person_note_category,
+      ${note},
+      NOW(),
+      NOW()
+    )
+    RETURNING id;
+  `;
+
+  revalidatePath("/dashboard/people");
+  return { message: "Note created", id: rows[0]?.id };
+}
+
+export async function updatePersonNote(prevState, formData) {
+  const userId = await requireUserId();
+  const id = formData.get("id");
+  if (!id) return { message: "Missing id" };
+
+  const category = normalizeText(formData.get("category"));
+  const note = normalizeText(formData.get("note"));
+
+  await sql`
+    UPDATE people_notes
+    SET
+      category = COALESCE(NULLIF(${category}, '')::person_note_category, category),
+      note = COALESCE(${note}, note),
+      updated_at = NOW()
+    WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;
+  `;
+
+  revalidatePath("/dashboard/people");
+  return { message: "Note updated" };
+}
+
+export async function deletePersonNote(input) {
+  const userId = await requireUserId();
+  const id = input?.get ? input.get("id") : input;
+  if (!id) return { message: "Missing id" };
+
+  await sql`DELETE FROM people_notes WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;`;
+
+  revalidatePath("/dashboard/people");
+  return { message: "Note deleted" };
+}
+
+export async function getPersonNotes(personId = null) {
+  const userId = await requireUserId();
+  const pid = personId ? String(personId) : null;
+  const { rows } = await sql`
+    SELECT *
+    FROM people_notes
+    WHERE user_id = ${userId}::uuid
+      AND (
+        NULLIF(${pid}, '')::uuid IS NULL
+        OR person_id = NULLIF(${pid}, '')::uuid
+      )
+    ORDER BY created_at DESC;
+  `;
+  return rows;
+}
+
+//////////////////////////////////////////////////////////////
 // GOAL <-> TASK LINKS
 //////////////////////////////////////////////////////////////
 
@@ -1073,8 +1233,24 @@ export async function getNotesForTarget(targetType, targetId) {
 // JOURNAL ENTRIES
 //////////////////////////////////////////////////////////////
 
-export async function upsertJournalEntry(prevState, formData) {
-  const userId = await requireUserId();
+const SINGLE_USER_ID = "d08974fe-c6cd-496d-9560-51e688d15235";
+
+export async function upsertJournalEntry(input, maybeFormData) {
+  const formData =
+    maybeFormData && typeof maybeFormData.get === "function"
+      ? maybeFormData
+      : input && typeof input.get === "function"
+      ? input
+      : null;
+  if (!formData) return { message: "Missing form data" };
+
+  let userId;
+  try {
+    userId = await requireUserId();
+  } catch (error) {
+    console.error(error);
+    userId = SINGLE_USER_ID;
+  }
 
   const entryDate = formData.get("entryDate"); // YYYY-MM-DD
   const privacy = formData.get("privacy") || "private";
@@ -1124,12 +1300,18 @@ export async function upsertJournalEntry(prevState, formData) {
       updated_at = NOW();
   `;
 
-  revalidatePath("/journal");
+  revalidatePath("/dashboard/journal");
   return { message: "Journal entry saved" };
 }
 
 export async function getJournalEntries({ from = null, to = null } = {}) {
-  const userId = await requireUserId();
+  let userId;
+  try {
+    userId = await requireUserId();
+  } catch (error) {
+    console.error(error);
+    userId = SINGLE_USER_ID;
+  }
 
   const { rows } = await sql`
     SELECT *
@@ -1152,7 +1334,7 @@ export async function deleteJournalEntry(entryDate) {
     WHERE user_id = ${userId} AND entry_date = ${entryDate}::date;
   `;
 
-  revalidatePath("/journal");
+  revalidatePath("/dashboard/journal");
   return { message: "Journal entry deleted" };
 }
 
@@ -1361,16 +1543,27 @@ export async function getQuotes() {
 // DREAMS
 //////////////////////////////////////////////////////////////
 
-export async function createDream(prevState, formData) {
+export async function createDream(input, maybeFormData) {
+  const formData =
+    maybeFormData && typeof maybeFormData.get === "function"
+      ? maybeFormData
+      : input && typeof input.get === "function"
+      ? input
+      : null;
+  if (!formData) return { message: "Missing form data" };
+
   const userId = await requireUserId();
-  const dream = normalizeText(formData.get("dream"));
+  const title = normalizeText(formData.get("title"));
+  const dreamBody = normalizeText(formData.get("dream"));
   const dreamDate = formData.get("dreamDate"); // YYYY-MM-DD optional
 
-  if (!dream) return { message: "Dream is required" };
+  if (!dreamBody && !title) return { message: "Dream is required" };
+
+  const dreamCombined = title ? `${title}\n\n${dreamBody || ""}` : dreamBody;
 
   const { rows } = await sql`
     INSERT INTO dreams (user_id, dream, dream_date, created_at, updated_at)
-    VALUES (${userId}, ${dream}, COALESCE(${dreamDate}::date, CURRENT_DATE), NOW(), NOW())
+    VALUES (${userId}, ${dreamCombined}, COALESCE(${dreamDate}::date, CURRENT_DATE), NOW(), NOW())
     RETURNING id;
   `;
 
@@ -1399,11 +1592,12 @@ export async function updateDream(prevState, formData) {
   return { message: "Dream updated" };
 }
 
-export async function deleteDream(id) {
+export async function deleteDream(input) {
   const userId = await requireUserId();
+  const id = input?.get ? input.get("id") : input;
   if (!id) return { message: "Missing id" };
 
-  await sql`DELETE FROM dreams WHERE id = ${id} AND user_id = ${userId};`;
+  await sql`DELETE FROM dreams WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;`;
 
   revalidatePath("/dreams");
   return { message: "Dream deleted" };

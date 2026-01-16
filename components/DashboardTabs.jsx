@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
@@ -38,7 +38,23 @@ export default function DashboardTabs({ initialTasks }) {
   const [tab, setTab] = useState("tasks"); // tasks | journal | dreams
   const [editingId, setEditingId] = useState(null);
 
-  const today = new Date().toISOString().slice(0, 10);
+  const [journalState, journalAction] = useActionState(
+    async (prevState, formData) => {
+      const result = await upsertJournalEntry(formData);
+      router.refresh();
+      return result || { message: "" };
+    },
+    { message: "" }
+  );
+
+  const timeZone = "America/Toronto";
+  const localDateFormatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const today = localDateFormatter.format(new Date());
 
   const tasks = useMemo(() => {
     const arr = Array.isArray(initialTasks) ? initialTasks : [];
@@ -60,12 +76,15 @@ export default function DashboardTabs({ initialTasks }) {
     return arr.filter((t) => {
       if (t.status !== "completed" || !t.completed_at) return false;
       try {
-        return new Date(t.completed_at).toISOString().slice(0, 10) === today;
+        const completedLocal = localDateFormatter.format(
+          new Date(t.completed_at)
+        );
+        return completedLocal === today;
       } catch {
         return false;
       }
     });
-  }, [initialTasks, today]);
+  }, [initialTasks, today, localDateFormatter]);
 
   return (
     <div className="border border-black">
@@ -123,7 +142,7 @@ export default function DashboardTabs({ initialTasks }) {
                 <input
                   name="dueDate"
                   type="date"
-                  defaultValue={today}
+                  defaultValue=""
                   className="border border-black p-2 rounded-none bg-transparent"
                 />
 
@@ -146,7 +165,10 @@ export default function DashboardTabs({ initialTasks }) {
               ) : (
                 <ul className="space-y-1 text-sm">
                   {completedToday.map((t) => (
-                    <li key={t.id} className="p-1 border-b border-dotted border-black/50 last:border-b-0">
+                    <li
+                      key={t.id}
+                      className="p-1 border-b border-dotted border-black/50 last:border-b-0"
+                    >
                       {t.title}
                     </li>
                   ))}
@@ -164,7 +186,10 @@ export default function DashboardTabs({ initialTasks }) {
                   const dueDateStr = formatDateOnly(t.due_date);
 
                   return (
-                    <li key={t.id} className="border border-black p-3 bg-white/70">
+                    <li
+                      key={t.id}
+                      className="border border-black p-3 bg-white/70"
+                    >
                       {!isEditing ? (
                         <div className="flex justify-between gap-4 items-start">
                           <div className="min-w-0 flex-1 space-y-1 break-words">
@@ -299,13 +324,7 @@ export default function DashboardTabs({ initialTasks }) {
           <div className="border border-black p-4">
             <h2 className="font-bold mb-3">Today's journal</h2>
 
-            <form
-              action={async (formData) => {
-                await upsertJournalEntry(formData);
-                router.refresh();
-              }}
-              className="grid gap-3"
-            >
+            <form action={journalAction} className="grid gap-3">
               <input
                 type="date"
                 name="entryDate"
@@ -333,6 +352,18 @@ export default function DashboardTabs({ initialTasks }) {
                 className="border border-black p-2 rounded-none"
               />
 
+              <input
+                name="exercise"
+                placeholder="Exercise"
+                className="border border-black p-2 rounded-none"
+              />
+
+              <input
+                name="food"
+                placeholder="Food"
+                className="border border-black p-2 rounded-none"
+              />
+
               <textarea
                 name="reflections"
                 placeholder="Reflections"
@@ -348,6 +379,9 @@ export default function DashboardTabs({ initialTasks }) {
               />
 
               <SubmitButton>Save journal</SubmitButton>
+              {journalState?.message ? (
+                <p className="text-error text-sm">{journalState.message}</p>
+              ) : null}
             </form>
           </div>
         )}
@@ -364,16 +398,23 @@ export default function DashboardTabs({ initialTasks }) {
               className="grid gap-3"
             >
               <input
+                type="text"
+                name="title"
+                placeholder="Title (optional)"
+                className="border border-black p-2 rounded-none bg-transparent"
+              />
+
+              <input
                 type="date"
                 name="dreamDate"
                 defaultValue={today}
-                className="border border-black p-2 rounded-none"
+                className="border border-black p-2 rounded-none bg-transparent"
               />
 
               <textarea
                 name="dream"
-                placeholder="text area to write dreams"
-                className="border border-black p-2 rounded-none"
+                placeholder=""
+                className="border border-black p-2 rounded-none bg-transparent"
                 rows={10}
                 required
               />

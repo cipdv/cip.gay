@@ -1,10 +1,10 @@
 import JournalForm from "@/components/JournalForm";
 import JournalEntries from "@/components/JournalEntries";
 
-import { getAllJournalEntries } from "../../_actions";
+import { getJournalEntries } from "@/app/_actions";
 
 const journalPage = async () => {
-  const journalEntries = await getAllJournalEntries();
+  const journalEntries = await getJournalEntries();
 
   return (
     <section>
