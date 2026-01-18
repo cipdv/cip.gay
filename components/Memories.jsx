@@ -1,6 +1,6 @@
 const Memories = ({ memories }) => {
-  if (!memories) {
-    return null; // or return some placeholder content
+  if (!memories?.length) {
+    return <p className="mt-4">No memories yet.</p>;
   }
 
   // Group memories by year
@@ -11,7 +11,9 @@ const Memories = ({ memories }) => {
 
   // Sort memories within each year by month
   for (let year in memoriesByYear) {
-    memoriesByYear[year].sort((a, b) => a.month - b.month);
+    memoriesByYear[year].sort(
+      (a, b) => a.month - b.month || a.day - b.day
+    );
   }
 
   const monthNames = [
@@ -30,16 +32,21 @@ const Memories = ({ memories }) => {
   ];
 
   return (
-    <div>
+    <div className="space-y-6">
       {Object.entries(memoriesByYear).map(([year, memories]) => (
-        <div key={year}>
-          <h2>{year}</h2>
-          {memories.map((memory) => (
-            <div key={memory._id}>
-              <h3>{`${monthNames[memory.month - 1]}`}</h3>
-              <p>{memory.notes}</p>
-            </div>
-          ))}
+        <div key={year} className="space-y-3">
+          <h2 className="text-xl font-semibold">{year}</h2>
+          <div className="space-y-3">
+            {memories.map((memory) => (
+              <div
+                key={memory.id}
+                className="border border-black rounded-none p-3 bg-white/70"
+              >
+                <h3 className="font-semibold">{`${monthNames[memory.month - 1]} ${memory.day}`}</h3>
+                <p className="whitespace-pre-line">{memory.memory}</p>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
