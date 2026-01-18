@@ -1133,6 +1133,38 @@ export async function unlinkIdea(ideaId, targetType, targetId) {
 }
 
 //////////////////////////////////////////////////////////////
+// MEAL IDEAS
+//////////////////////////////////////////////////////////////
+
+export async function createMealIdea(prevState, formData) {
+  const userId = await requireUserId();
+  const idea = normalizeText(formData.get("idea"));
+  const notes = normalizeText(formData.get("notes"));
+
+  if (!idea) return { message: "Meal idea is required" };
+
+  const { rows } = await sql`
+    INSERT INTO meal_ideas (user_id, idea, notes, created_at, updated_at)
+    VALUES (${userId}, ${idea}, ${notes}, NOW(), NOW())
+    RETURNING id;
+  `;
+
+  revalidatePath("/dashboard/meals");
+  return { message: "Meal idea created", id: rows[0]?.id };
+}
+
+export async function getMealIdeas() {
+  const userId = await requireUserId();
+  const { rows } = await sql`
+    SELECT *
+    FROM meal_ideas
+    WHERE user_id = ${userId}
+    ORDER BY created_at DESC;
+  `;
+  return rows;
+}
+
+//////////////////////////////////////////////////////////////
 // NOTES (belongs to exactly ONE thing, enforced in actions)
 //////////////////////////////////////////////////////////////
 
