@@ -106,7 +106,7 @@ const WebsiteTasksList = ({ tasks, websites }) => {
                 aria-label="Delete task"
                 title="Delete task"
               >
-                <img src="/images/icons8-eye-16.png" alt="Delete task" />
+                <i className="fa-solid fa-trash-can" aria-hidden="true"></i>
               </button>
             </form>
           </div>

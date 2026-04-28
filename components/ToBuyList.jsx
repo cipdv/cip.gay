@@ -74,7 +74,7 @@ function DisplayRow({ item, onCompleteSubmit, onDeleteSubmit, onEdit }) {
                 aria-label="Delete item"
                 title="Delete item"
               >
-                <img src="/images/icons8-eye-16.png" alt="Delete item" />
+                <i className="fa-solid fa-trash-can" aria-hidden="true"></i>
               </button>
             </form>
             <button
@@ -84,7 +84,7 @@ function DisplayRow({ item, onCompleteSubmit, onDeleteSubmit, onEdit }) {
               title="Edit item"
               onClick={onEdit}
             >
-              <img src="/images/icons8-hide-16.png" alt="Edit item" />
+              <i className="fa-regular fa-pen-to-square" aria-hidden="true"></i>
             </button>
           </div>
         </div>

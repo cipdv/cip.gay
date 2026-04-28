@@ -169,7 +169,7 @@ const PeopleList = ({ people, notes }) => {
                   aria-label="Delete person"
                   title="Delete person"
                 >
-                  <img src="/images/icons8-eye-16.png" alt="Delete person" />
+                  <i className="fa-solid fa-trash-can" aria-hidden="true"></i>
                 </button>
               </form>
             </div>
@@ -364,10 +364,10 @@ const PeopleList = ({ people, notes }) => {
                                   title="Edit note"
                                   onClick={() => setEditingNoteId(note.id)}
                                 >
-                                  <img
-                                    src="/images/icons8-hide-16.png"
-                                    alt="Edit note"
-                                  />
+                                  <i
+                                    className="fa-regular fa-pen-to-square"
+                                    aria-hidden="true"
+                                  ></i>
                                 </button>
                                 <form onSubmit={handleDeleteNote}>
                                   <input type="hidden" name="id" value={note.id} />
@@ -377,10 +377,10 @@ const PeopleList = ({ people, notes }) => {
                                     aria-label="Delete note"
                                     title="Delete note"
                                   >
-                                    <img
-                                      src="/images/icons8-eye-16.png"
-                                      alt="Delete note"
-                                    />
+                                    <i
+                                      className="fa-solid fa-trash-can"
+                                      aria-hidden="true"
+                                    ></i>
                                   </button>
                                 </form>
                               </div>

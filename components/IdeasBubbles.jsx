@@ -60,7 +60,7 @@ function DisplayRow({ idea, onMove, onDeleteSubmit, onEdit, isExpanded, onToggle
                 aria-label="Delete idea"
                 title="Delete idea"
               >
-                <img src="/images/icons8-eye-16.png" alt="Delete idea" />
+                <i className="fa-solid fa-trash-can" aria-hidden="true"></i>
               </button>
             </form>
             <button
@@ -70,7 +70,7 @@ function DisplayRow({ idea, onMove, onDeleteSubmit, onEdit, isExpanded, onToggle
               title="Edit idea"
               onClick={onEdit}
             >
-              <img src="/images/icons8-hide-16.png" alt="Edit idea" />
+              <i className="fa-regular fa-pen-to-square" aria-hidden="true"></i>
             </button>
           </div>
         </div>

@@ -1,9 +1,10 @@
 import DashboardTabs from "@/components/DashboardTabs";
-import { getTasks, getQuotes } from "@/app/_actions";
+import { getProjects, getTasks, getQuotes } from "@/app/_actions";
 
 const DashboardPage = async () => {
   const today = new Date().toISOString().slice(0, 10);
   const tasks = await getTasks();
+  const projects = await getProjects();
   const quotes = await getQuotes();
   const randomQuote =
     Array.isArray(quotes) && quotes.length > 0
@@ -22,7 +23,7 @@ const DashboardPage = async () => {
         </p>
       </div>
 
-      <DashboardTabs initialTasks={tasks || []} />
+      <DashboardTabs initialTasks={tasks || []} projects={projects || []} />
     </section>
   );
 };

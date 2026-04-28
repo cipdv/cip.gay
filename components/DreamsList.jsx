@@ -80,7 +80,7 @@ const DreamsList = ({ dreams }) => {
                   aria-label="Delete dream"
                   title="Delete dream"
                 >
-                  <img src="/images/icons8-eye-16.png" alt="Delete dream" />
+                  <i className="fa-solid fa-trash-can" aria-hidden="true"></i>
                 </button>
               </form>
             </div>

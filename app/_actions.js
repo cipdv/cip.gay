@@ -248,7 +248,8 @@ export async function createProject(prevState, formData) {
     RETURNING id;
   `;
 
-  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/projects");
   return { message: "Project created", id: rows[0]?.id };
 }
 
@@ -278,8 +279,8 @@ export async function updateProject(prevState, formData) {
     WHERE id = ${projectId} AND user_id = ${userId};
   `;
 
-  revalidatePath("/projects");
-  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/projects");
   return { message: "Project updated" };
 }
 
@@ -289,7 +290,8 @@ export async function deleteProject(projectId) {
 
   await sql`DELETE FROM projects WHERE id = ${projectId} AND user_id = ${userId};`;
 
-  revalidatePath("/projects");
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/projects");
   return { message: "Project deleted" };
 }
 
@@ -396,7 +398,7 @@ export async function createTask(formData) {
   if (!title) return { message: "Task title is required" };
 
   const { rows } = await sql`
-    INSERT INTO tasks (user_id, project_id, title, details, due_date, status, created_at, updated_at)
+    INSERT INTO tasks (user_id, project_id, title, details, due_date, status, sort_order, created_at, updated_at)
     VALUES (
       ${userId}::uuid,
       NULLIF(${projectId}, '')::uuid,
@@ -404,6 +406,12 @@ export async function createTask(formData) {
       ${details},
       NULLIF(${dueDate}, '')::date,
       'active',
+      (
+        SELECT COALESCE(MAX(sort_order), -1) + 1
+        FROM tasks
+        WHERE user_id = ${userId}::uuid
+          AND status = 'active'
+      ),
       NOW(),
       NOW()
     )
@@ -411,6 +419,7 @@ export async function createTask(formData) {
   `;
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/projects");
   revalidatePath("/tasks");
   return { message: "Task created", id: rows[0]?.id };
 }
@@ -430,25 +439,40 @@ export async function updateTask(formData) {
 
   // IMPORTANT: tasks.status is enum completion_status
   const status = normalizeText(formData.get("status")); // 'active' | 'completed' | 'archived' etc.
+  const hasTitle = formData.has("title");
+  const hasDetails = formData.has("details");
+  const hasProjectId = formData.has("projectId");
+  const hasDueDate = formData.has("dueDate");
+  const hasStatus = formData.has("status");
+
+  if (hasTitle && !title) return { message: "Task title is required" };
 
   const completedAt = status === "completed" ? nowISO() : null;
 
   await sql`
     UPDATE tasks
     SET
-      title = COALESCE(NULLIF(${title}, ''), title),
-      details = COALESCE(NULLIF(${details}, ''), details),
+      title = CASE WHEN ${hasTitle} THEN ${title} ELSE title END,
+      details = CASE WHEN ${hasDetails} THEN ${details} ELSE details END,
 
-      project_id = COALESCE(NULLIF(${projectId}, '')::uuid, project_id),
-      due_date = COALESCE(NULLIF(${dueDate}, '')::date, due_date),
+      project_id = CASE
+        WHEN ${hasProjectId} THEN NULLIF(${projectId}, '')::uuid
+        ELSE project_id
+      END,
+      due_date = CASE
+        WHEN ${hasDueDate} THEN NULLIF(${dueDate}, '')::date
+        ELSE due_date
+      END,
 
-      status = COALESCE(NULLIF(${status}, '')::completion_status, status),
+      status = CASE
+        WHEN ${hasStatus} THEN NULLIF(${status}, '')::completion_status
+        ELSE status
+      END,
 
       completed_at = CASE
-        WHEN NULLIF(${status}, '')::completion_status = 'completed'
+        WHEN ${hasStatus} AND NULLIF(${status}, '')::completion_status = 'completed'
           THEN COALESCE(completed_at, ${completedAt}::timestamptz)
-        WHEN NULLIF(${status}, '') IS NULL
-          THEN completed_at
+        WHEN NOT ${hasStatus} THEN completed_at
         ELSE NULL
       END,
 
@@ -458,8 +482,30 @@ export async function updateTask(formData) {
   `;
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/projects");
   revalidatePath("/tasks");
   return { message: "Task updated" };
+}
+
+export async function reorderTasks(taskIds) {
+  const userId = await requireUserId();
+  const ids = Array.isArray(taskIds) ? taskIds.filter(Boolean) : [];
+
+  if (!ids.length) return { message: "No tasks to reorder" };
+
+  for (let index = 0; index < ids.length; index += 1) {
+    await sql`
+      UPDATE tasks
+      SET sort_order = ${index}, updated_at = NOW()
+      WHERE id = ${ids[index]}::uuid
+        AND user_id = ${userId}::uuid
+        AND status = 'active';
+    `;
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/projects");
+  return { message: "Tasks reordered" };
 }
 
 export async function deleteTask(taskId) {
@@ -473,6 +519,7 @@ export async function deleteTask(taskId) {
   `;
 
   revalidatePath("/dashboard");
+  revalidatePath("/dashboard/projects");
   revalidatePath("/tasks");
   return { message: "Task deleted" };
 }
@@ -514,6 +561,7 @@ export async function getTasks({
 
     ORDER BY
       status ASC,
+      sort_order ASC NULLS LAST,
       due_date NULLS LAST,
       created_at DESC;
   `;
@@ -567,16 +615,27 @@ export async function updateWebsite(prevState, formData) {
   const domainHost = normalizeText(formData.get("domainHost"));
   const projectId = normalizeText(formData.get("projectId"));
   const details = normalizeText(formData.get("details"));
+  const hasTitle = formData.has("title");
+  const hasLink = formData.has("link");
+  const hasHost = formData.has("host");
+  const hasDomainHost = formData.has("domainHost");
+  const hasProjectId = formData.has("projectId");
+  const hasDetails = formData.has("details");
+
+  if (hasTitle && !title) return { message: "Title is required" };
 
   await sql`
     UPDATE websites
     SET
-      title = COALESCE(NULLIF(${title}, ''), title),
-      link = COALESCE(${link}, link),
-      host = COALESCE(${host}, host),
-      domain_host = COALESCE(${domainHost}, domain_host),
-      project_id = COALESCE(NULLIF(${projectId}, '')::uuid, project_id),
-      details = COALESCE(${details}, details),
+      title = CASE WHEN ${hasTitle} THEN ${title} ELSE title END,
+      link = CASE WHEN ${hasLink} THEN ${link} ELSE link END,
+      host = CASE WHEN ${hasHost} THEN ${host} ELSE host END,
+      domain_host = CASE WHEN ${hasDomainHost} THEN ${domainHost} ELSE domain_host END,
+      project_id = CASE
+        WHEN ${hasProjectId} THEN NULLIF(${projectId}, '')::uuid
+        ELSE project_id
+      END,
+      details = CASE WHEN ${hasDetails} THEN ${details} ELSE details END,
       updated_at = NOW()
     WHERE id = ${id}::uuid AND user_id = ${userId}::uuid;
   `;
@@ -650,21 +709,38 @@ export async function updateWebsiteTask(prevState, formData) {
   const dueDate = normalizeText(formData.get("dueDate"));
   const status = normalizeText(formData.get("status"));
   const websiteId = normalizeText(formData.get("websiteId"));
+  const hasTitle = formData.has("title");
+  const hasDetails = formData.has("details");
+  const hasDueDate = formData.has("dueDate");
+  const hasStatus = formData.has("status");
+  const hasWebsiteId = formData.has("websiteId");
+
+  if (hasTitle && !title) return { message: "Title is required" };
+  if (hasWebsiteId && !websiteId) return { message: "Website is required" };
 
   const completedAt = status === "completed" ? nowISO() : null;
 
   await sql`
     UPDATE website_tasks
     SET
-      title = COALESCE(NULLIF(${title}, ''), title),
-      details = COALESCE(${details}, details),
-      due_date = COALESCE(NULLIF(${dueDate}, '')::date, due_date),
-      website_id = COALESCE(NULLIF(${websiteId}, '')::uuid, website_id),
-      status = COALESCE(NULLIF(${status}, '')::completion_status, status),
+      title = CASE WHEN ${hasTitle} THEN ${title} ELSE title END,
+      details = CASE WHEN ${hasDetails} THEN ${details} ELSE details END,
+      due_date = CASE
+        WHEN ${hasDueDate} THEN NULLIF(${dueDate}, '')::date
+        ELSE due_date
+      END,
+      website_id = CASE
+        WHEN ${hasWebsiteId} THEN NULLIF(${websiteId}, '')::uuid
+        ELSE website_id
+      END,
+      status = CASE
+        WHEN ${hasStatus} THEN NULLIF(${status}, '')::completion_status
+        ELSE status
+      END,
       completed_at = CASE
-        WHEN NULLIF(${status}, '')::completion_status = 'completed'
+        WHEN ${hasStatus} AND NULLIF(${status}, '')::completion_status = 'completed'
           THEN COALESCE(completed_at, ${completedAt}::timestamptz)
-        WHEN NULLIF(${status}, '') IS NULL THEN completed_at
+        WHEN NOT ${hasStatus} THEN completed_at
         ELSE NULL
       END,
       updated_at = NOW()
