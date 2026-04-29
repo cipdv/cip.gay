@@ -2,7 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createTask, deleteTask, updateTask } from "@/app/_actions";
+import {
+  createTask,
+  deleteTask,
+  updateProject,
+  updateTask,
+} from "@/app/_actions";
 
 const formatDate = (value) => {
   if (!value) return "";
@@ -18,6 +23,7 @@ const ProjectsList = ({ projects, tasks = [] }) => {
   const [isPending, startTransition] = useTransition();
   const [expandedId, setExpandedId] = useState(null);
   const [addingFor, setAddingFor] = useState(null);
+  const [editingProjectId, setEditingProjectId] = useState(null);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [showCompletedFor, setShowCompletedFor] = useState({});
 
@@ -35,6 +41,17 @@ const ProjectsList = ({ projects, tasks = [] }) => {
   if (!projects?.length) {
     return <p className="mt-4">No projects yet.</p>;
   }
+
+  const handleUpdateProject = (event) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+
+    startTransition(async () => {
+      await updateProject(null, formData);
+      setEditingProjectId(null);
+      router.refresh();
+    });
+  };
 
   const handleAddTask = (event, projectId) => {
     event.preventDefault();
@@ -92,6 +109,7 @@ const ProjectsList = ({ projects, tasks = [] }) => {
         const projectTasks = tasksByProject[project.id] || [];
         const expanded = expandedId === project.id;
         const showAdd = addingFor === project.id;
+        const editingProject = editingProjectId === project.id;
         const visibleTasks = projectTasks.filter(
           (task) =>
             task.status !== "completed" || showCompletedFor[project.id] === true
@@ -102,29 +120,116 @@ const ProjectsList = ({ projects, tasks = [] }) => {
             key={project.id}
             className="border border-black rounded-none p-3 bg-white/70"
           >
-            <div className="flex justify-between gap-4 items-start">
-              <button
-                type="button"
-                className="min-w-0 text-left space-y-1 break-words flex-1"
-                onClick={() =>
-                  setExpandedId((prev) =>
-                    prev === project.id ? null : project.id
-                  )
-                }
+            {editingProject ? (
+              <form
+                onSubmit={handleUpdateProject}
+                className="grid gap-3 border border-black p-3 rounded-none bg-white/70"
               >
-                <div className="font-bold break-words">{project.title}</div>
-                {project.details && (
-                  <div
-                    className="text-sm break-words"
-                    dangerouslySetInnerHTML={{
-                      __html: project.details.replace(/\n/g, "<br />"),
-                    }}
-                  />
-                )}
-              </button>
-            </div>
+                <input type="hidden" name="projectId" value={project.id} />
 
-            {expanded && (
+                <label
+                  className="font-semibold"
+                  htmlFor={`project-title-${project.id}`}
+                >
+                  Title
+                </label>
+                <input
+                  id={`project-title-${project.id}`}
+                  name="title"
+                  defaultValue={project.title || ""}
+                  className="border border-black p-2 rounded-none bg-transparent"
+                  required
+                />
+
+                <label
+                  className="font-semibold"
+                  htmlFor={`project-status-${project.id}`}
+                >
+                  Status
+                </label>
+                <select
+                  id={`project-status-${project.id}`}
+                  name="status"
+                  defaultValue={project.status || "active"}
+                  className="border border-black p-2 rounded-none bg-transparent"
+                >
+                  <option value="active">Active</option>
+                  <option value="completed">Completed</option>
+                  <option value="archived">Archived</option>
+                </select>
+
+                <label
+                  className="font-semibold"
+                  htmlFor={`project-details-${project.id}`}
+                >
+                  Details
+                </label>
+                <textarea
+                  id={`project-details-${project.id}`}
+                  name="details"
+                  defaultValue={project.details || ""}
+                  className="border border-black p-2 rounded-none bg-transparent h-24"
+                />
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    className="btn border border-black rounded-none"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="border border-black rounded-none px-4"
+                    onClick={() => setEditingProjectId(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="flex justify-between gap-4 items-start">
+                <button
+                  type="button"
+                  className="min-w-0 text-left space-y-1 break-words flex-1"
+                  onClick={() =>
+                    setExpandedId((prev) =>
+                      prev === project.id ? null : project.id
+                    )
+                  }
+                >
+                  <div className="font-bold break-words">{project.title}</div>
+                  {project.details && (
+                    <div
+                      className="text-sm break-words"
+                      dangerouslySetInnerHTML={{
+                        __html: project.details.replace(/\n/g, "<br />"),
+                      }}
+                    />
+                  )}
+                </button>
+
+                <div className="flex-shrink-0 flex flex-col gap-2">
+                  <button
+                    type="button"
+                    className="border border-black rounded-none p-2 w-10 h-10 hover:bg-[#e0e5c7]"
+                    aria-label="Edit project"
+                    title="Edit project"
+                    onClick={() => {
+                      setExpandedId(project.id);
+                      setEditingProjectId(project.id);
+                    }}
+                  >
+                    <i
+                      className="fa-regular fa-pen-to-square"
+                      aria-hidden="true"
+                    ></i>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {expanded && !editingProject && (
               <div className="mt-3 space-y-3">
                 <div className="text-sm">
                   <div>Status: {project.status || "active"}</div>

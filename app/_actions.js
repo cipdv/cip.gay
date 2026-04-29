@@ -258,21 +258,25 @@ export async function updateProject(prevState, formData) {
   const projectId = formData.get("projectId");
   const title = normalizeText(formData.get("title"));
   const details = normalizeText(formData.get("details"));
-  const status = formData.get("status"); // 'active' | 'completed' | 'archived'
+  const status = normalizeText(formData.get("status")); // 'active' | 'completed' | 'archived'
+  const hasTitle = formData.has("title");
+  const hasDetails = formData.has("details");
+  const hasStatus = formData.has("status");
 
   if (!projectId) return { message: "Missing projectId" };
+  if (hasTitle && !title) return { message: "Project title is required" };
 
   const completedAt = status === "completed" ? nowISO() : null;
 
   await sql`
     UPDATE projects
     SET
-      title = COALESCE(${title}, title),
-      details = COALESCE(${details}, details),
-      status = COALESCE(${status}, status),
+      title = CASE WHEN ${hasTitle} THEN ${title} ELSE title END,
+      details = CASE WHEN ${hasDetails} THEN ${details} ELSE details END,
+      status = CASE WHEN ${hasStatus} THEN ${status} ELSE status END,
       completed_at = CASE
-        WHEN ${status} = 'completed' THEN COALESCE(completed_at, ${completedAt}::timestamptz)
-        WHEN ${status} IS NULL THEN completed_at
+        WHEN ${hasStatus} AND ${status} = 'completed' THEN COALESCE(completed_at, ${completedAt}::timestamptz)
+        WHEN NOT ${hasStatus} THEN completed_at
         ELSE NULL
       END,
       updated_at = NOW()
